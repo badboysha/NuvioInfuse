@@ -1,0 +1,29 @@
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/AdvancedSettingsPage.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/AdvancedSettingsPage.kt
+index 6418963df..8cddc3f26 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/AdvancedSettingsPage.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/AdvancedSettingsPage.kt
+@@ -137,6 +137,24 @@ internal fun LazyListScope.advancedSettingsContent(
+                         }
+                     },
+                 )
++                // Fork: Clear Image Cache (from ysosrs123's NuvioTV fork).
++                val platformContext = coil3.compose.LocalPlatformContext.current
++                var imagesCleared by rememberSaveable { mutableStateOf(false) }
++                SettingsNavigationRow(
++                    title = "Clear Image Cache",
++                    description = if (imagesCleared) {
++                        "Cleared. Artwork reloads as you browse."
++                    } else {
++                        "Posters, backdrops and logos. Continue Watching, library and add-ons are kept."
++                    },
++                    isTablet = isTablet,
++                    onClick = {
++                        val loader = coil3.SingletonImageLoader.get(platformContext)
++                        loader.memoryCache?.clear()
++                        loader.diskCache?.clear()
++                        imagesCleared = true
++                    },
++                )
+             }
+         }
+     }

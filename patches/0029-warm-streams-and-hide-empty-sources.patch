@@ -1,0 +1,99 @@
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalPlayerLaunchCoordinator.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalPlayerLaunchCoordinator.kt
+index 37c9974a6..382d1ca4d 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalPlayerLaunchCoordinator.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalPlayerLaunchCoordinator.kt
+@@ -47,7 +47,7 @@ suspend fun prepareExternalPlayerLaunch(
+ 
+     // Fork: Infuse gets the link a redirect chain ends at (sources needing headers are left alone).
+     val resolvedUrlDeferred = if (resolveRedirects && request.sourceHeaders.isEmpty()) {
+-        async { resolveExternalStreamUrl(request.sourceUrl) }
++        async { StreamWarmup.resolve(request.sourceUrl) }
+     } else {
+         null
+     }
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/StreamWarmup.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/StreamWarmup.kt
+new file mode 100644
+index 000000000..7c07b278d
+--- /dev/null
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/StreamWarmup.kt
+@@ -0,0 +1,47 @@
++package com.nuvio.app.features.player
++
++import com.nuvio.app.features.watchprogress.WatchProgressClock
++import kotlinx.coroutines.CoroutineScope
++import kotlinx.coroutines.Deferred
++import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.SupervisorJob
++import kotlinx.coroutines.async
++import kotlinx.coroutines.launch
++import kotlinx.coroutines.sync.Mutex
++import kotlinx.coroutines.sync.withLock
++
++/**
++ * Fork: "warm the stream before you press Play" (from ysosrs123's NuvioTV fork). The stream list
++ * resolves the top links' redirect chains in the background as soon as they appear, so the debrid
++ * service unlocks the file early and pressing Play hands Infuse the final link with no wait.
++ * Results are kept for five minutes. Only links without addon-declared headers are warmed (the
++ * same rule the launch-time redirect resolution uses).
++ */
++internal object StreamWarmup {
++    private const val KeepMs = 5 * 60 * 1000L
++    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
++    private val mutex = Mutex()
++    private val resolved = mutableMapOf<String, Pair<String, Long>>()
++    private val inFlight = mutableMapOf<String, Deferred<String>>()
++
++    fun warm(url: String) {
++        if (!url.startsWith("http://") && !url.startsWith("https://")) return
++        scope.launch { runCatching { resolve(url) } }
++    }
++
++    /** The link [url]'s redirect chain ends at — from the warm-up cache when it is fresh. */
++    suspend fun resolve(url: String): String {
++        val now = WatchProgressClock.nowEpochMs()
++        val pending = mutex.withLock {
++            resolved[url]?.let { (target, at) -> if (now - at < KeepMs) return target }
++            inFlight.getOrPut(url) { scope.async { resolveExternalStreamUrl(url) } }
++        }
++        val target = runCatching { pending.await() }.getOrDefault(url)
++        mutex.withLock {
++            inFlight.remove(url)
++            if (target != url) resolved[url] = target to WatchProgressClock.nowEpochMs()
++            if (resolved.size > 50) resolved.keys.take(resolved.size - 50).forEach(resolved::remove)
++        }
++        return target
++    }
++}
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamsScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamsScreen.kt
+index 7ac8f1b8a..5b0267d0c 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamsScreen.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamsScreen.kt
+@@ -772,6 +772,18 @@ internal fun StreamList(
+         StreamBadgeSettingsRepository.uiState
+     }.collectAsStateWithLifecycle()
+ 
++    // Fork: warm the first link of the top two sources so Play hands Infuse a ready link.
++    val warmTargets = filteredGroups
++        .mapNotNull { group -> group.streams.firstOrNull() }
++        .filter { it.behaviorHints.proxyHeaders?.request.isNullOrEmpty() }
++        .mapNotNull { it.playableDirectUrl?.takeIf { url -> url.startsWith("http") } }
++        .take(2)
++    LaunchedEffect(warmTargets) {
++        if (warmTargets.isEmpty()) return@LaunchedEffect
++        kotlinx.coroutines.delay(800)
++        warmTargets.forEach { com.nuvio.app.features.player.StreamWarmup.warm(it) }
++    }
++
+     CompositionLocalProvider(LocalStreamSizeLabelFormat provides formatStreamSize) {
+     LazyColumn(
+         modifier = modifier.fillMaxWidth(),
+@@ -843,7 +855,8 @@ private fun LazyListScope.streamSection(
+     resumePositionMs: Long?,
+     resumeProgressFraction: Float?,
+ ) {
+-    if (group.streams.isEmpty() && !group.isLoading) return
++    // Fork: an addon still loading with nothing yet (or done with nothing) shows no header at all.
++    if (group.streams.isEmpty()) return
+ 
+     if (showHeader) {
+         item(key = "header_$sectionKey") {
