@@ -45,7 +45,7 @@ index f4c907bbf..c55239a0d 100644
  }
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/Top10Rank.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/Top10Rank.kt
 new file mode 100644
-index 000000000..76ab3d440
+index 000000000..038435445
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/Top10Rank.kt
 @@ -0,0 +1,62 @@
@@ -78,7 +78,7 @@ index 000000000..76ab3d440
 +    fun ranks(title: String, keys: List<String>): Map<String, Int> {
 +        if (!isTop10(title)) return emptyMap()
 +        val out = LinkedHashMap<String, Int>()
-+        keys.take(10).forEachIndexed { i, k -> out.putIfAbsent(k, i + 1) }
++        keys.take(10).forEachIndexed { i, k -> if (k !in out) out[k] = i + 1 }
 +        return out
 +    }
 +}
