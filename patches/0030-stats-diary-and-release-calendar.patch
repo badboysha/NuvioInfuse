@@ -517,7 +517,7 @@ index 000000000..9f211a9fa
 +    return "${MonthNames[m - 1].take(3)} $d"
 +}
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/library/LibraryScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/library/LibraryScreen.kt
-index c7efef8ab..09ee176af 100644
+index 8062f7566..185ce8fb7 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/library/LibraryScreen.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/library/LibraryScreen.kt
 @@ -35,6 +35,8 @@ import androidx.compose.material.icons.rounded.ViewAgenda
@@ -529,10 +529,10 @@ index c7efef8ab..09ee176af 100644
  import androidx.compose.material3.LinearProgressIndicator
  import androidx.compose.material3.MaterialTheme
  import androidx.compose.material3.OutlinedTextField
-@@ -115,6 +117,11 @@ fun LibraryScreen(
-         LibraryRepository.ensureLoaded()
-         LibraryRepository.uiState
-     }.collectAsStateWithLifecycle()
+@@ -126,6 +128,11 @@ fun LibraryScreen(
+     val effectivePosterPattern = remember(libraryPosterPattern, libraryPosterScreens) {
+         if (CustomPosterScreen.LIBRARY in libraryPosterScreens) libraryPosterPattern else ""
+     }
 +    // Fork: Stats / Diary / Calendar screen.
 +    var forkInsightsPage by remember { mutableStateOf<ForkInsightsPage?>(null) }
 +    forkInsightsPage?.let { page ->
@@ -541,7 +541,7 @@ index c7efef8ab..09ee176af 100644
      val cloudUiState by CloudLibraryRepository.uiState.collectAsStateWithLifecycle()
      val cloudSettings by remember {
          DebridSettingsRepository.ensureLoaded()
-@@ -313,6 +320,21 @@ fun LibraryScreen(
+@@ -324,6 +331,21 @@ fun LibraryScreen(
                              },
                              modifier = Modifier.padding(horizontal = 16.dp),
                              actions = {
