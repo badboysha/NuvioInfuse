@@ -1,0 +1,113 @@
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeCatalogSection.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeCatalogSection.kt
+index f4c907bbf..c55239a0d 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeCatalogSection.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeCatalogSection.kt
+@@ -4,8 +4,10 @@ import androidx.compose.foundation.layout.BoxWithConstraints
+ import androidx.compose.foundation.layout.PaddingValues
+ import androidx.compose.foundation.layout.fillMaxWidth
+ import androidx.compose.runtime.Composable
++import androidx.compose.runtime.remember
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.unit.Dp
++import androidx.compose.ui.unit.dp
+ import com.nuvio.app.core.ui.NuvioShelfSection
+ import com.nuvio.app.core.ui.NuvioViewAllPillSize
+ import com.nuvio.app.core.ui.rememberPosterCardStyleUiState
+@@ -68,6 +70,14 @@ private fun HomeCatalogRowSectionContent(
+     onPosterLongClick: ((MetaPreview) -> Unit)?,
+ ) {
+     val posterCardStyle = rememberPosterCardStyleUiState()
++    val top10Ranks = remember(section.title, entries) {
++        Top10Rank.ranks(section.title, entries.map { it.stableKey() })
++    }
++    val artworkHeight = if (posterCardStyle.catalogLandscapeModeEnabled) {
++        (posterCardStyle.heightDp * 0.56f).dp
++    } else {
++        posterCardStyle.heightDp.dp
++    }
+ 
+     NuvioShelfSection(
+         title = section.title,
+@@ -79,6 +89,7 @@ private fun HomeCatalogRowSectionContent(
+         viewAllPillSize = NuvioViewAllPillSize.Compact,
+         key = { item -> item.stableKey() },
+     ) { item ->
++        Top10RankedCard(rank = top10Ranks[item.stableKey()], artworkHeight = artworkHeight) {
+         HomePosterCard(
+             item = item,
+             useLandscapeBackdropMode = posterCardStyle.catalogLandscapeModeEnabled,
+@@ -90,5 +101,6 @@ private fun HomeCatalogRowSectionContent(
+             onClick = onPosterClick?.let { { it(item) } },
+             onLongClick = onPosterLongClick?.let { { it(item) } },
+         )
++        }
+     }
+ }
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/Top10Rank.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/Top10Rank.kt
+new file mode 100644
+index 000000000..76ab3d440
+--- /dev/null
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/Top10Rank.kt
+@@ -0,0 +1,62 @@
++package com.nuvio.app.features.home.components
++
++import androidx.compose.foundation.layout.Arrangement
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.Row
++import androidx.compose.foundation.layout.height
++import androidx.compose.material3.Text
++import androidx.compose.runtime.Composable
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.graphics.drawscope.Stroke
++import androidx.compose.ui.text.TextStyle
++import androidx.compose.ui.text.font.FontWeight
++import androidx.compose.ui.unit.Dp
++import androidx.compose.ui.unit.dp
++import androidx.compose.ui.unit.em
++import androidx.compose.ui.unit.sp
++
++/** Fork: Netflix-style Top 10 rows — a big outlined rank numeral behind each of the first ten cards. */
++internal object Top10Rank {
++    fun isTop10(title: String): Boolean {
++        val t = title.lowercase()
++        return t.contains("top 10") || t.contains("top ten") || t.contains("top10")
++    }
++
++    fun ranks(title: String, keys: List<String>): Map<String, Int> {
++        if (!isTop10(title)) return emptyMap()
++        val out = LinkedHashMap<String, Int>()
++        keys.take(10).forEachIndexed { i, k -> out.putIfAbsent(k, i + 1) }
++        return out
++    }
++}
++
++@Composable
++internal fun Top10RankedCard(
++    rank: Int?,
++    artworkHeight: Dp,
++    card: @Composable () -> Unit,
++) {
++    if (rank == null) {
++        card()
++        return
++    }
++    val size = (artworkHeight.value * 0.9f).sp
++    Row(
++        verticalAlignment = Alignment.Top,
++        horizontalArrangement = Arrangement.spacedBy(-(artworkHeight * 0.16f)),
++    ) {
++        Box(Modifier.height(artworkHeight), contentAlignment = Alignment.BottomCenter) {
++            val base = TextStyle(
++                fontSize = size,
++                fontWeight = FontWeight.Black,
++                lineHeight = size,
++                letterSpacing = if (rank == 10) (-0.08).em else 0.em,
++            )
++            Text("$rank", style = base.copy(color = Color.Black))
++            Text("$rank", style = base.copy(color = Color.White.copy(alpha = 0.85f), drawStyle = Stroke(width = 6f)))
++        }
++        card()
++    }
++}

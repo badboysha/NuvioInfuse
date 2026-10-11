@@ -1,0 +1,344 @@
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
+index bb5afd1b8..289649a80 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
+@@ -17,6 +17,8 @@ import androidx.compose.material.icons.filled.CheckCircle
+ import androidx.compose.material.icons.filled.CheckCircleOutline
+ import androidx.compose.material.icons.filled.DeleteOutline
+ import androidx.compose.material.icons.filled.Info
++import androidx.compose.material.icons.filled.Notifications
++import androidx.compose.material.icons.filled.NotificationsOff
+ import androidx.compose.material.icons.filled.PlayArrow
+ import androidx.compose.material.icons.filled.Replay
+ import androidx.compose.material3.MaterialTheme
+@@ -1652,6 +1654,11 @@ internal fun MainAppContent(
+                         item = preview,
+                         fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
+                     )
++                    // Fork: Coming Soon titles offer "Remind Me" (Library save + release-day notification).
++                    val isUnreleased = com.nuvio.app.features.home.ForkHomeRows.isUnreleased(
++                        preview.rawReleaseDate ?: preview.releaseInfo,
++                        com.nuvio.app.features.watchprogress.WatchProgressClock.nowEpochMs(),
++                    )
+                     val removesFromLibrary = isSaved &&
+                         (posterActionTarget.libraryItem != null || !isRemoteLibrarySource)
+                     NuvioPosterZoomActionOverlay(
+@@ -1667,11 +1674,16 @@ internal fun MainAppContent(
+                         anchor = selectedPosterAnchor,
+                         actions = listOf(
+                             PosterZoomOverlayAction(
+-                                icon = if (isSaved) Icons.Default.DeleteOutline else Icons.Default.Add,
+-                                label = if (isSaved) {
+-                                    stringResource(Res.string.hero_remove_from_library)
+-                                } else {
+-                                    stringResource(Res.string.hero_add_to_library)
++                                icon = when {
++                                    isUnreleased -> if (isSaved) Icons.Default.NotificationsOff else Icons.Default.Notifications
++                                    isSaved -> Icons.Default.DeleteOutline
++                                    else -> Icons.Default.Add
++                                },
++                                label = when {
++                                    isUnreleased && isSaved -> "Cancel Reminder"
++                                    isUnreleased -> "Remind Me"
++                                    isSaved -> stringResource(Res.string.hero_remove_from_library)
++                                    else -> stringResource(Res.string.hero_add_to_library)
+                                 },
+                                 isDestructive = removesFromLibrary,
+                                 exitAnimation = if (removesFromLibrary && !isRemoteLibrarySource) {
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt
+new file mode 100644
+index 000000000..2d4e69cef
+--- /dev/null
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt
+@@ -0,0 +1,107 @@
++package com.nuvio.app.features.home
++
++import com.nuvio.app.features.catalog.CatalogTarget
++import com.nuvio.app.features.tmdb.TmdbMetadataService
++import com.nuvio.app.features.watched.WatchedRepository
++import kotlinx.coroutines.sync.Mutex
++import kotlinx.coroutines.sync.withLock
++
++/**
++ * Fork: extra Netflix-style Home rows built from TMDB.
++ *  - "Because you watched X": recommendations for the most recently finished titles.
++ *  - "Coming Soon": upcoming movies + streamer series premieres over the next 90 days.
++ * Rows come back as ordinary [HomeCatalogSection]s with no "See All" (nothing behind them).
++ */
++object ForkHomeRows {
++    const val BECAUSE_KEY_PREFIX = "fork.because."
++    const val COMING_SOON_KEY = "fork.comingSoon"
++
++    private val mutex = Mutex()
++    private var becauseSignature: String? = null
++    private var becauseRows: List<HomeCatalogSection> = emptyList()
++    private var comingSoonDay: String? = null
++    private var comingSoonRow: HomeCatalogSection? = null
++
++    suspend fun becauseYouWatched(maxRows: Int = 2): List<HomeCatalogSection> {
++        val watched = WatchedRepository.uiState.value.items
++        val seeds = watched
++            .filter { it.type == "movie" || it.type == "series" }
++            .sortedByDescending { it.markedAtEpochMs }
++            .distinctBy { it.id }
++            .take(maxRows)
++        if (seeds.isEmpty()) return emptyList()
++        val signature = seeds.joinToString("|") { it.id }
++        mutex.withLock { if (signature == becauseSignature) return becauseRows }
++
++        val seenIds = watched.map { it.id }.toSet()
++        val seenNames = watched.map { it.name.trim().lowercase() }.toSet()
++        val usedIds = mutableSetOf<String>()
++        val rows = seeds.mapNotNull { seed ->
++            val items = TmdbMetadataService.recommendationsFor(seed.id, seed.type)
++                .filter { it.id !in seenIds && it.name.trim().lowercase() !in seenNames && usedIds.add(it.id) }
++            if (items.size < 4) return@mapNotNull null
++            section(
++                key = BECAUSE_KEY_PREFIX + seed.id,
++                title = "Because you watched ${seed.name}",
++                type = seed.type,
++                items = items,
++            )
++        }
++        mutex.withLock {
++            becauseSignature = signature
++            becauseRows = rows
++        }
++        return rows
++    }
++
++    suspend fun comingSoon(region: String, nowEpochMs: Long): HomeCatalogSection? {
++        val today = isoDate(nowEpochMs)
++        mutex.withLock { if (today == comingSoonDay && comingSoonRow != null) return comingSoonRow }
++        val until = isoDate(nowEpochMs + 90L * 24 * 60 * 60 * 1000)
++        val items = TmdbMetadataService.comingSoon(region.ifBlank { "US" }.uppercase(), today, until)
++        val row = if (items.size < 4) null else section(COMING_SOON_KEY, "Coming Soon", "movie", items)
++        mutex.withLock {
++            comingSoonDay = today
++            comingSoonRow = row
++        }
++        return row
++    }
++
++    @Throws(Throwable::class)
++    suspend fun becauseYouWatchedChecked(maxRows: Int): List<HomeCatalogSection> = becauseYouWatched(maxRows)
++
++    @Throws(Throwable::class)
++    suspend fun comingSoonChecked(region: String, nowEpochMs: Long): HomeCatalogSection? = comingSoon(region, nowEpochMs)
++
++    /** True when the title's release date (yyyy-MM-dd) is after today. */
++    fun isUnreleased(rawReleaseDate: String?, nowEpochMs: Long): Boolean {
++        val date = rawReleaseDate?.takeIf { it.length >= 10 }?.substring(0, 10) ?: return false
++        return date > isoDate(nowEpochMs)
++    }
++
++    private fun section(key: String, title: String, type: String, items: List<MetaPreview>) = HomeCatalogSection(
++        key = key,
++        title = title,
++        subtitle = "",
++        addonName = "TMDB",
++        target = CatalogTarget.Addon(manifestUrl = "", contentType = type, catalogId = key),
++        items = items,
++        availableItemCount = items.size,
++        hasMore = false,
++    )
++
++    /** UTC yyyy-MM-dd for an epoch time (civil-from-days, no datetime library needed). */
++    fun isoDate(epochMs: Long): String {
++        val days = epochMs.floorDiv(86_400_000L)
++        val z = days + 719_468
++        val era = z.floorDiv(146_097L)
++        val doe = z - era * 146_097
++        val yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365
++        val doy = doe - (365 * yoe + yoe / 4 - yoe / 100)
++        val mp = (5 * doy + 2) / 153
++        val d = doy - (153 * mp + 2) / 5 + 1
++        val m = if (mp < 10) mp + 3 else mp - 9
++        val y = yoe + era * 400 + if (m <= 2) 1 else 0
++        return "${y.toString().padStart(4, '0')}-${m.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}"
++    }
++}
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
+index 0f3f0889a..9c4216a24 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
+@@ -319,6 +319,18 @@ fun HomeScreen(
+     var hasUserScrolledContinueWatching by remember(activeProfileId) { mutableStateOf(false) }
+     var hasUserScrolledUpcoming by remember(activeProfileId) { mutableStateOf(false) }
+ 
++    // Fork: Coming Soon + "Because you watched X" rows (see ForkHomeRows). Re-evaluated when the
++    // profile or the watched list changes; the shared side caches by last titles and by day.
++    var forkRows by remember(activeProfileId) { mutableStateOf<List<HomeCatalogSection>>(emptyList()) }
++    val latestWatchedId = watchedUiState.items.maxByOrNull { it.markedAtEpochMs }?.id
++    LaunchedEffect(activeProfileId, latestWatchedId, watchedUiState.isLoaded) {
++        val now = WatchProgressClock.nowEpochMs()
++        val region = androidx.compose.ui.text.intl.Locale.current.region.ifBlank { "US" }
++        val soon = runCatching { ForkHomeRows.comingSoon(region, now) }.getOrNull()
++        val because = runCatching { ForkHomeRows.becauseYouWatched(2) }.getOrDefault(emptyList())
++        forkRows = listOfNotNull(soon) + because
++    }
++
+     LaunchedEffect(activeProfileId, continueWatchingListState) {
+         snapshotFlow { continueWatchingListState.isScrollInProgress }.collect { isScrolling ->
+             if (isScrolling) hasUserScrolledContinueWatching = true
+@@ -1153,6 +1165,21 @@ fun HomeScreen(
+                         disintegrationRequest = continueWatchingDisintegrationRequest,
+                     )
+ 
++                    forkRows.forEach { section ->
++                        item(key = section.key, contentType = "catalog") {
++                            HomeCatalogRowSection(
++                                section = section,
++                                entries = section.items.take(HOME_CATALOG_PREVIEW_LIMIT),
++                                modifier = Modifier.padding(bottom = 12.dp),
++                                sectionPadding = homeSectionPadding,
++                                watchedKeys = watchedUiState.watchedKeys,
++                                fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
++                                onPosterClick = onPosterClick,
++                                onPosterLongClick = onPosterLongClick,
++                            )
++                        }
++                    }
++
+                     keyedEnabledHomeItems.forEach { keyedSettingsItem ->
+                         val settingsItem = keyedSettingsItem.value
+                         if (settingsItem.isCollection) {
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/notifications/EpisodeReleaseNotificationsRepository.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/notifications/EpisodeReleaseNotificationsRepository.kt
+index e33a5f540..ab616d57b 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/notifications/EpisodeReleaseNotificationsRepository.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/notifications/EpisodeReleaseNotificationsRepository.kt
+@@ -329,6 +329,26 @@ object EpisodeReleaseNotificationsRepository {
+         return changed
+     }
+ 
++    private fun movieReminderRequests(items: List<LibraryItem>): List<EpisodeReleaseNotificationRequest> {
++        val today = CurrentDateProvider.todayIsoDate()
++        val isoDate = Regex("""^\d{4}-\d{2}-\d{2}""")
++        return items
++            .filter { item -> !isSeriesLibraryType(item.type) }
++            .mapNotNull { item ->
++                val date = item.releaseInfo?.trim()?.takeIf { isoDate.containsMatchIn(it) }?.take(10)
++                    ?: return@mapNotNull null
++                if (date <= today) return@mapNotNull null
++                EpisodeReleaseNotificationRequest(
++                    requestId = "movie-release-${ProfileRepository.activeProfileId}-${item.id}",
++                    notificationTitle = item.name,
++                    notificationBody = "Out today. Tap to watch.",
++                    releaseDateIso = date,
++                    deepLinkUrl = buildMetaDeepLinkUrl(type = item.type, id = item.id),
++                    backdropUrl = item.banner ?: item.poster,
++                )
++            }
++    }
++
+     private fun inferFollowedOnIsoDate(item: LibraryItem): String {
+         if (item.savedAtEpochMs >= MinReasonableSavedAtEpochMs) {
+             return EpisodeReleaseNotificationsClock.isoDateFromEpochMs(item.savedAtEpochMs)
+@@ -377,7 +397,11 @@ object EpisodeReleaseNotificationsRepository {
+                 errorMessage = null,
+             )
+ 
+-            if (trackedShowsByKey.isEmpty()) {
++            // Fork: "Remind Me" on a Coming Soon movie saves it to the Library with its full
++            // release date in releaseInfo; each such movie gets a notification on release day.
++            val movieReminders = movieReminderRequests(currentLibraryState.items)
++
++            if (trackedShowsByKey.isEmpty() && movieReminders.isEmpty()) {
+                 runCatching { EpisodeReleaseNotificationPlatform.clearScheduledEpisodeReleaseNotifications() }
+                 _uiState.value = _uiState.value.copy(
+                     isLoading = false,
+@@ -400,7 +424,7 @@ object EpisodeReleaseNotificationsRepository {
+                         buildRequestsForShow(trackedShow)
+                     }
+                 }
+-            }.awaitAll().flatten()
++            }.awaitAll().flatten() + movieReminders
+ 
+             runCatching {
+                 EpisodeReleaseNotificationPlatform.scheduleEpisodeReleaseNotifications(requests)
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
+index fe0c628be..362911fc8 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
+@@ -1191,6 +1191,81 @@ object TmdbMetadataService {
+         }.getOrNull()
+     }
+ 
++    /**
++     * Fork: "Because you watched X" — TMDB recommendations for any Nuvio id (tmdb:/tt…).
++     * Empty when the title can't be matched to TMDB or no key is configured.
++     */
++    suspend fun recommendationsFor(id: String, type: String): List<MetaPreview> {
++        val mediaType = if (type.equals("series", true) || type.equals("tv", true)) "tv" else "movie"
++        val tmdbId = runCatching { TmdbService.ensureTmdbId(id, mediaType) }.getOrNull()
++            ?.toIntOrNull() ?: return emptyList()
++        val language = normalizeTmdbLanguage(TmdbSettingsRepository.snapshot().language)
++        return fetchMoreLikeThis(tmdbId = tmdbId, mediaType = mediaType, language = language)
++    }
++
++    /**
++     * Fork: "Coming Soon" — upcoming movies for [region] plus new series premiering on the big
++     * streamers, release dates from [fromDate] to [toDate] (yyyy-MM-dd), soonest first.
++     */
++    suspend fun comingSoon(region: String, fromDate: String, toDate: String): List<MetaPreview> = coroutineScope {
++        val language = normalizeTmdbLanguage(TmdbSettingsRepository.snapshot().language)
++        val movies = async {
++            fetch<TmdbRecommendationResponse>(
++                endpoint = "discover/movie",
++                query = mapOf(
++                    "language" to language,
++                    "region" to region,
++                    "sort_by" to "popularity.desc",
++                    "with_release_type" to "2|3|4",
++                    "release_date.gte" to fromDate,
++                    "release_date.lte" to toDate,
++                ),
++            )?.results.orEmpty().map { it to "movie" }
++        }
++        val series = async {
++            fetch<TmdbRecommendationResponse>(
++                endpoint = "discover/tv",
++                query = mapOf(
++                    "language" to language,
++                    "sort_by" to "popularity.desc",
++                    "with_networks" to "213|2739|2552|1024|3186|49|453|4330|2697",
++                    "first_air_date.gte" to fromDate,
++                    "first_air_date.lte" to toDate,
++                ),
++            )?.results.orEmpty().map { it to "series" }
++        }
++        (movies.await().take(14) + series.await().take(8))
++            .mapNotNull { (item, type) ->
++                val date = (item.releaseDate ?: item.firstAirDate)?.takeIf { it.length >= 10 } ?: return@mapNotNull null
++                if (date < fromDate) return@mapNotNull null
++                val poster = buildImageUrl(item.posterPath, "w500") ?: return@mapNotNull null
++                val title = item.title?.trim()?.takeIf(String::isNotBlank)
++                    ?: item.name?.trim()?.takeIf(String::isNotBlank)
++                    ?: return@mapNotNull null
++                MetaPreview(
++                    id = "tmdb:${item.id}",
++                    type = type,
++                    name = title,
++                    poster = poster,
++                    banner = buildImageUrl(item.backdropPath, "w1280"),
++                    posterShape = PosterShape.Poster,
++                    description = item.overview?.trim()?.takeIf(String::isNotBlank),
++                    // Full date: the Library keeps it, so a Remind Me can fire on release day.
++                    releaseInfo = date,
++                    rawReleaseDate = date,
++                )
++            }
++            .distinctBy { it.id }
++            .sortedBy { it.rawReleaseDate }
++    }
++
++    private fun comingSoonLabel(date: String): String {
++        val months = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
++        val month = date.substring(5, 7).toIntOrNull()?.let { months.getOrNull(it - 1) } ?: return date
++        val day = date.substring(8, 10).toIntOrNull() ?: return date
++        return "$month $day"
++    }
++
+     private suspend fun fetchMoreLikeThis(
+         tmdbId: Int,
+         mediaType: String,
