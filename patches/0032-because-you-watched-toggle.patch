@@ -1,0 +1,156 @@
+diff --git a/composeApp/src/androidMain/kotlin/com/nuvio/app/MainActivity.kt b/composeApp/src/androidMain/kotlin/com/nuvio/app/MainActivity.kt
+index 21539099b..88f580863 100644
+--- a/composeApp/src/androidMain/kotlin/com/nuvio/app/MainActivity.kt
++++ b/composeApp/src/androidMain/kotlin/com/nuvio/app/MainActivity.kt
+@@ -140,6 +140,7 @@ open class MainActivity : AppCompatActivity() {
+         BingeGroupCacheStorage.initialize(applicationContext)
+         PluginStorage.initialize(applicationContext)
+         CollectionMobileSettingsStorage.initialize(applicationContext)
++        com.nuvio.app.features.home.ForkHomeSettingsStorage.initialize(applicationContext)
+         CollectionStorage.initialize(applicationContext)
+         DownloadsStorage.initialize(applicationContext)
+         DownloadsPlatformDownloader.initialize(applicationContext)
+diff --git a/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt
+new file mode 100644
+index 000000000..369e181b4
+--- /dev/null
++++ b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt
+@@ -0,0 +1,22 @@
++package com.nuvio.app.features.home
++
++import android.content.Context
++import android.content.SharedPreferences
++
++internal actual object ForkHomeSettingsStorage {
++    private const val preferencesName = "nuvio_fork_home_settings"
++    private const val becauseKey = "fork_because_rows"
++
++    private var preferences: SharedPreferences? = null
++
++    fun initialize(context: Context) {
++        preferences = context.getSharedPreferences(preferencesName, Context.MODE_PRIVATE)
++    }
++
++    actual fun loadBecauseRowsEnabled(): Boolean? =
++        preferences?.takeIf { it.contains(becauseKey) }?.getBoolean(becauseKey, true)
++
++    actual fun saveBecauseRowsEnabled(enabled: Boolean) {
++        preferences?.edit()?.putBoolean(becauseKey, enabled)?.apply()
++    }
++}
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
+new file mode 100644
+index 000000000..202c229de
+--- /dev/null
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
+@@ -0,0 +1,29 @@
++package com.nuvio.app.features.home
++
++import kotlinx.coroutines.flow.MutableStateFlow
++import kotlinx.coroutines.flow.StateFlow
++import kotlinx.coroutines.flow.asStateFlow
++
++internal expect object ForkHomeSettingsStorage {
++    fun loadBecauseRowsEnabled(): Boolean?
++    fun saveBecauseRowsEnabled(enabled: Boolean)
++}
++
++/** Fork: on/off switches for the fork's own Home rows. Device-local, not synced. */
++object ForkHomeSettings {
++    private val _becauseRowsEnabled = MutableStateFlow(true)
++    val becauseRowsEnabled: StateFlow<Boolean> = _becauseRowsEnabled.asStateFlow()
++    private var loaded = false
++
++    fun ensureLoaded() {
++        if (loaded) return
++        loaded = true
++        _becauseRowsEnabled.value = ForkHomeSettingsStorage.loadBecauseRowsEnabled() ?: true
++    }
++
++    fun setBecauseRowsEnabled(enabled: Boolean) {
++        ensureLoaded()
++        _becauseRowsEnabled.value = enabled
++        ForkHomeSettingsStorage.saveBecauseRowsEnabled(enabled)
++    }
++}
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
+index 12a3bcc6b..85a943ccc 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
+@@ -323,8 +323,13 @@ fun HomeScreen(
+     // watched list changes; the shared side caches by last-watched titles.
+     var forkRows by remember(activeProfileId) { mutableStateOf<List<HomeCatalogSection>>(emptyList()) }
+     val latestWatchedId = watchedUiState.items.maxByOrNull { it.markedAtEpochMs }?.id
+-    LaunchedEffect(activeProfileId, latestWatchedId, watchedUiState.isLoaded) {
+-        forkRows = runCatching { ForkHomeRows.becauseYouWatched(2) }.getOrDefault(emptyList())
++    val becauseRowsEnabled by remember {
++        ForkHomeSettings.ensureLoaded()
++        ForkHomeSettings.becauseRowsEnabled
++    }.collectAsStateWithLifecycle()
++    LaunchedEffect(activeProfileId, latestWatchedId, watchedUiState.isLoaded, becauseRowsEnabled) {
++        forkRows = if (!becauseRowsEnabled) emptyList()
++        else runCatching { ForkHomeRows.becauseYouWatched(2) }.getOrDefault(emptyList())
+     }
+ 
+     LaunchedEffect(activeProfileId, continueWatchingListState) {
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt
+index 45549f1ec..781911e46 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt
+@@ -40,6 +40,8 @@ import com.nuvio.app.core.ui.NuvioToastController
+ import com.nuvio.app.features.addons.AddonRepository
+ import com.nuvio.app.features.home.HomeCatalogSettingsItem
+ import com.nuvio.app.features.home.HomeCatalogSettingsRepository
++import com.nuvio.app.features.home.ForkHomeSettings
++import androidx.lifecycle.compose.collectAsStateWithLifecycle
+ import com.nuvio.app.features.home.components.HomeEmptyStateCard
+ import nuvio.composeapp.generated.resources.Res
+ import nuvio.composeapp.generated.resources.action_retry
+@@ -184,6 +186,25 @@ internal fun LazyListScope.homescreenSettingsContent(
+                 val hapticFeedback = LocalHapticFeedback.current
+                 val pinToMoveToast = stringResource(Res.string.settings_homescreen_pin_to_move_toast)
+ 
++                // Fork: the "Because you watched" rows aren't an add-on catalog, so they get a switch
++                // of their own above the catalog list.
++                val becauseRowsEnabled by remember {
++                    ForkHomeSettings.ensureLoaded()
++                    ForkHomeSettings.becauseRowsEnabled
++                }.collectAsStateWithLifecycle()
++                SettingsGroup(isTablet = isTablet) {
++                    SettingsSwitchRow(
++                        title = "Because You Watched",
++                        description = "Rows of titles like the ones you watched last",
++                        checked = becauseRowsEnabled,
++                        isTablet = isTablet,
++                        onCheckedChange = ForkHomeSettings::setBecauseRowsEnabled,
++                    )
++                }
++                androidx.compose.foundation.layout.Spacer(
++                    Modifier.padding(top = if (isTablet) 16.dp else 12.dp),
++                )
++
+                 HomescreenCatalogList(
+                     isTablet = isTablet,
+                     items = items,
+diff --git a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt
+new file mode 100644
+index 000000000..9d7125b02
+--- /dev/null
++++ b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt
+@@ -0,0 +1,16 @@
++package com.nuvio.app.features.home
++
++import platform.Foundation.NSUserDefaults
++
++internal actual object ForkHomeSettingsStorage {
++    private const val becauseKey = "fork_because_rows"
++
++    actual fun loadBecauseRowsEnabled(): Boolean? {
++        val defaults = NSUserDefaults.standardUserDefaults
++        return if (defaults.objectForKey(becauseKey) == null) null else defaults.boolForKey(becauseKey)
++    }
++
++    actual fun saveBecauseRowsEnabled(enabled: Boolean) {
++        NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = becauseKey)
++    }
++}
