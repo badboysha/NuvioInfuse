@@ -1,5 +1,5 @@
 diff --git a/composeApp/src/androidMain/kotlin/com/nuvio/app/features/streams/StreamBadgeSettingsStorage.android.kt b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/streams/StreamBadgeSettingsStorage.android.kt
-index ef49a8b7b..8954cec84 100644
+index ef49a8b7..8954cec8 100644
 --- a/composeApp/src/androidMain/kotlin/com/nuvio/app/features/streams/StreamBadgeSettingsStorage.android.kt
 +++ b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/streams/StreamBadgeSettingsStorage.android.kt
 @@ -17,6 +17,7 @@ actual object StreamBadgeSettingsStorage {
@@ -24,7 +24,7 @@ index ef49a8b7b..8954cec84 100644
  
      actual fun loadStreamBackgroundMode(): String? = loadString(streamBackgroundModeKey)
 diff --git a/composeApp/src/commonMain/composeResources/values/strings.xml b/composeApp/src/commonMain/composeResources/values/strings.xml
-index 3136ec62b..6c34620a9 100644
+index 3136ec62..6c34620a 100644
 --- a/composeApp/src/commonMain/composeResources/values/strings.xml
 +++ b/composeApp/src/commonMain/composeResources/values/strings.xml
 @@ -896,7 +896,12 @@
@@ -41,7 +41,7 @@ index 3136ec62b..6c34620a9 100644
      <string name="settings_stream_background_description">Choose the background for the streams screen.</string>
      <string name="settings_stream_badge_position_title">Badge position</string>
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/StreamsSettingsPage.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/StreamsSettingsPage.kt
-index e6133f9bb..e134a9ffc 100644
+index e6133f9b..e134a9ff 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/StreamsSettingsPage.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/StreamsSettingsPage.kt
 @@ -92,6 +92,8 @@ import nuvio.composeapp.generated.resources.settings_stream_size_badges_title
@@ -68,7 +68,7 @@ index e6133f9bb..e134a9ffc 100644
          }
  
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamBadgeSettingsRepository.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamBadgeSettingsRepository.kt
-index b929d7f88..c87ac34ee 100644
+index b929d7f8..c87ac34e 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamBadgeSettingsRepository.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamBadgeSettingsRepository.kt
 @@ -20,6 +20,7 @@ data class StreamBadgeSettingsUiState(
@@ -127,7 +127,7 @@ index b929d7f88..c87ac34ee 100644
              backgroundMode = backgroundMode,
          )
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamBadgeSettingsStorage.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamBadgeSettingsStorage.kt
-index c9dcad617..b4e0d857b 100644
+index c9dcad61..b4e0d857 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamBadgeSettingsStorage.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamBadgeSettingsStorage.kt
 @@ -9,6 +9,8 @@ internal expect object StreamBadgeSettingsStorage {
@@ -140,7 +140,7 @@ index c9dcad617..b4e0d857b 100644
      fun saveStreamBackgroundMode(mode: String)
      fun loadStreamBadgePlacement(): String?
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamsScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamsScreen.kt
-index eba92f01c..7ac8f1b8a 100644
+index 8b31987c..c920162b 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamsScreen.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamsScreen.kt
 @@ -30,10 +30,12 @@ import androidx.compose.foundation.lazy.itemsIndexed
@@ -235,7 +235,7 @@ index eba92f01c..7ac8f1b8a 100644
                          debridEnabled = debridEnabled,
                          appendInstantServiceToDefaultName = appendInstantServiceToDefaultName,
                          onStreamSelected = onStreamSelected,
-@@ -1184,3 +1213,80 @@ private fun FooterLoadingBlock(
+@@ -1207,3 +1236,80 @@ private fun FooterLoadingBlock(
          )
      }
  }
@@ -317,7 +317,7 @@ index eba92f01c..7ac8f1b8a 100644
 +    }
 +}
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamsTabletLayout.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamsTabletLayout.kt
-index e8b6d5edb..77b61130e 100644
+index e8b6d5ed..77b61130 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamsTabletLayout.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamsTabletLayout.kt
 @@ -54,6 +54,9 @@ import org.jetbrains.compose.resources.stringResource
@@ -355,7 +355,7 @@ index e8b6d5edb..77b61130e 100644
                              appendInstantServiceToDefaultName = appendInstantServiceToDefaultName,
                              onStreamSelected = onStreamSelected,
 diff --git a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/streams/StreamBadgeSettingsStorage.ios.kt b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/streams/StreamBadgeSettingsStorage.ios.kt
-index f117e5e00..83d6795df 100644
+index f117e5e0..83d6795d 100644
 --- a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/streams/StreamBadgeSettingsStorage.ios.kt
 +++ b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/streams/StreamBadgeSettingsStorage.ios.kt
 @@ -14,6 +14,7 @@ actual object StreamBadgeSettingsStorage {

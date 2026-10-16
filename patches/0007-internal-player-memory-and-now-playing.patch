@@ -1,8 +1,8 @@
 diff --git a/iosApp/iosApp/Player/MPVPlayerBridge.swift b/iosApp/iosApp/Player/MPVPlayerBridge.swift
-index c66d27b5e..20f846e1d 100644
+index 5102a1ce..c6041fc9 100644
 --- a/iosApp/iosApp/Player/MPVPlayerBridge.swift
 +++ b/iosApp/iosApp/Player/MPVPlayerBridge.swift
-@@ -506,6 +506,11 @@ final class MPVPlayerViewController: UIViewController {
+@@ -524,6 +524,11 @@ final class MPVPlayerViewController: UIViewController {
          checkError(mpv_set_option_string(mpv, "target-colorspace-hint", "yes"))
          checkError(mpv_set_option_string(mpv, "tone-mapping", "auto"))
          checkError(mpv_set_option_string(mpv, "hdr-compute-peak", "yes"))
@@ -14,14 +14,3 @@ index c66d27b5e..20f846e1d 100644
  
          checkError(mpv_initialize(mpv))
          applyAudioLanguagePreferences(preferredAudioLanguages)
-@@ -898,7 +903,9 @@ final class MPVPlayerViewController: UIViewController {
-     private func activateAudioSessionForPlayback() {
-         do {
-             let session = AVAudioSession.sharedInstance()
--            try session.setCategory(.playback, mode: .moviePlayback, options: [.mixWithOthers])
-+            // From NuvioMobile-Enhanced df592e0bd: a .mixWithOthers session can never become the
-+            // Now Playing app, so lock screen, Control Center and headset controls disappeared.
-+            try session.setCategory(.playback, mode: .moviePlayback)
-             try session.setActive(true)
-         } catch {
-             print("[NowPlaying] Failed to activate audio session: \(error)")

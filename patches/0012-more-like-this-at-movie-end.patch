@@ -1,5 +1,5 @@
 diff --git a/composeApp/src/androidMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.android.kt b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.android.kt
-index 26cc7c0c6..326487baf 100644
+index 26cc7c0c..326487ba 100644
 --- a/composeApp/src/androidMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.android.kt
 +++ b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.android.kt
 @@ -30,6 +30,7 @@ actual object PlayerSettingsStorage {
@@ -43,7 +43,7 @@ index 26cc7c0c6..326487baf 100644
          payload.decodeSyncBoolean(autoShowSubtitlesOnMuteEnabledKey)?.let(::saveAutoShowSubtitlesOnMuteEnabled)
          payload.decodeSyncBoolean(externalPlayerEnabledKey)?.let(::saveExternalPlayerEnabled)
 diff --git a/composeApp/src/commonMain/composeResources/values/strings.xml b/composeApp/src/commonMain/composeResources/values/strings.xml
-index 28d798fd9..ca9e6058b 100644
+index 28d798fd..ca9e6058 100644
 --- a/composeApp/src/commonMain/composeResources/values/strings.xml
 +++ b/composeApp/src/commonMain/composeResources/values/strings.xml
 @@ -2476,4 +2476,6 @@
@@ -54,10 +54,10 @@ index 28d798fd9..ca9e6058b 100644
 +    <string name="settings_playback_movie_recommendations_description">Suggest titles from More Like This when a movie reaches its end credits.</string>
  </resources>
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/PlayerDestination.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/PlayerDestination.kt
-index e3f7e7844..6caa445be 100644
+index 6b5c676a..59ff4ea0 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/PlayerDestination.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/PlayerDestination.kt
-@@ -13,6 +13,7 @@ import com.nuvio.app.features.player.PlayerLaunch
+@@ -14,6 +14,7 @@ import com.nuvio.app.features.player.PlayerLaunch
  import com.nuvio.app.features.player.PlayerLaunchStore
  import com.nuvio.app.features.player.PlayerScreen
  import com.nuvio.app.features.watchprogress.ResumePromptRepository
@@ -65,10 +65,10 @@ index e3f7e7844..6caa445be 100644
  import com.nuvio.app.navigation.NuvioNavigator
  import com.nuvio.app.navigation.PlayerRoute
  
-@@ -124,6 +125,16 @@ internal fun PlayerDestination(
-         onOpenExternalUrl = { url ->
+@@ -129,6 +130,16 @@ internal fun PlayerDestination(
              openExternalStreamUrl(url)
          },
+         onOpenPartyMedia = onOpenPartyMedia,
 +        onOpenMetaDetails = { preview ->
 +            onBack()
 +            navController.navigate(
@@ -83,7 +83,7 @@ index e3f7e7844..6caa445be 100644
      )
  }
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerPlaybackOverlays.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerPlaybackOverlays.kt
-index 36f5ef695..4b74ccd98 100644
+index 36f5ef69..4b74ccd9 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerPlaybackOverlays.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerPlaybackOverlays.kt
 @@ -12,6 +12,8 @@ import androidx.compose.ui.Modifier
@@ -126,18 +126,18 @@ index 36f5ef695..4b74ccd98 100644
          ErrorModal(
              message = errorMessage,
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreen.kt
-index 3342d628e..6f0d4f984 100644
+index 9160de7c..9e0b5b14 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreen.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreen.kt
-@@ -21,6 +21,7 @@ fun PlayerScreen(
-     onBack: () -> Unit,
+@@ -23,6 +23,7 @@ fun PlayerScreen(
      onOpenInExternalPlayer: ((ExternalPlayerPlaybackRequest) -> Unit)? = null,
      onOpenExternalUrl: ((String) -> Unit)? = null,
+     onOpenPartyMedia: (PartyMedia) -> Unit = {},
 +    onOpenMetaDetails: ((com.nuvio.app.features.home.MetaPreview) -> Unit)? = null,
      modifier: Modifier = Modifier,
      logo: String? = null,
      poster: String? = null,
-@@ -61,6 +62,7 @@ fun PlayerScreen(
+@@ -65,6 +66,7 @@ fun PlayerScreen(
              onBack = onBack,
              onOpenInExternalPlayer = onOpenInExternalPlayer,
              onOpenExternalUrl = onOpenExternalUrl,
@@ -146,10 +146,10 @@ index 3342d628e..6f0d4f984 100644
              logo = logo,
              poster = poster,
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenArgs.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenArgs.kt
-index 40f08c6c0..bb8cd66eb 100644
+index 81581c8a..18344b78 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenArgs.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenArgs.kt
-@@ -18,6 +18,7 @@ internal data class PlayerScreenArgs(
+@@ -19,6 +19,7 @@ internal data class PlayerScreenArgs(
      val onBack: () -> Unit,
      val onOpenInExternalPlayer: ((ExternalPlayerPlaybackRequest) -> Unit)?,
      val onOpenExternalUrl: ((String) -> Unit)?,
@@ -158,10 +158,10 @@ index 40f08c6c0..bb8cd66eb 100644
      val logo: String?,
      val poster: String?,
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeEffects.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeEffects.kt
-index 5ef869902..cebb487a5 100644
+index e2134f14..de2eadde 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeEffects.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeEffects.kt
-@@ -702,6 +702,30 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
+@@ -709,6 +709,30 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
              showNextEpisodeCard = false
          }
      }
@@ -193,10 +193,10 @@ index 5ef869902..cebb487a5 100644
  
  private fun PlayerScreenRuntime.buildNowPlayingInfo(): PlayerNowPlayingInfo {
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeState.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeState.kt
-index 8518570ae..d4c77a4de 100644
+index 0a0be733..11b6d670 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeState.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeState.kt
-@@ -179,6 +179,9 @@ internal class PlayerScreenRuntime(
+@@ -182,6 +182,9 @@ internal class PlayerScreenRuntime(
      var nextEpisodeInfo by mutableStateOf<NextEpisodeInfo?>(null)
      var showNextEpisodeCard by mutableStateOf(false)
      var nextEpisodeCardDismissed by mutableStateOf(false)
@@ -207,7 +207,7 @@ index 8518570ae..d4c77a4de 100644
      var nextEpisodeAutoPlaySourceName by mutableStateOf<String?>(null)
      var nextEpisodeAutoPlayCountdown by mutableStateOf<Int?>(null)
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeUi.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeUi.kt
-index e49db7922..6c081f9eb 100644
+index 6d7f25be..179420b0 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeUi.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeUi.kt
 @@ -1,5 +1,7 @@
@@ -218,15 +218,15 @@ index e49db7922..6c081f9eb 100644
  import androidx.compose.animation.AnimatedVisibility
  import androidx.compose.animation.core.tween
  import androidx.compose.animation.fadeIn
-@@ -18,6 +20,7 @@ import androidx.compose.runtime.rememberUpdatedState
- import androidx.compose.ui.Alignment
+@@ -20,6 +22,7 @@ import androidx.compose.ui.Alignment
  import androidx.compose.ui.Modifier
  import androidx.compose.ui.layout.onSizeChanged
+ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 +import com.nuvio.app.features.player.skip.PlayerNextEpisodeRules
  import com.nuvio.app.features.p2p.P2pStreamingState
+ import com.nuvio.app.features.party.PartyRepository
  import com.nuvio.app.features.p2p.formatP2pMegabytes
- import com.nuvio.app.features.p2p.formatP2pSpeed
-@@ -485,6 +488,24 @@ private fun BoxScope.RenderPlaybackOverlays(
+@@ -513,6 +516,24 @@ private fun BoxScope.RenderPlaybackOverlays(
              nextEpisodeCardDismissed = true
              showNextEpisodeCard = false
          },
@@ -251,7 +251,7 @@ index e49db7922..6c081f9eb 100644
          errorMessage = errorMessage,
              onDismissError = {
                  flushWatchProgress()
-@@ -693,3 +714,17 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
+@@ -721,3 +742,17 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
          onDismiss = { showStreamInfo = false },
      )
  }
@@ -270,7 +270,7 @@ index e49db7922..6c081f9eb 100644
 +    }
 +
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerSettingsRepository.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerSettingsRepository.kt
-index 7982499c4..2dca54b47 100644
+index 7982499c..2dca54b4 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerSettingsRepository.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerSettingsRepository.kt
 @@ -42,6 +42,7 @@ data class PlayerSettingsUiState(
@@ -329,7 +329,7 @@ index 7982499c4..2dca54b47 100644
              autoShowSubtitlesOnMuteEnabled = autoShowSubtitlesOnMuteEnabled,
              externalPlayerEnabled = externalPlayerEnabled,
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.kt
-index 7b9d45bc1..76b233e29 100644
+index 7b9d45bc..76b233e2 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.kt
 @@ -25,6 +25,8 @@ internal expect object PlayerSettingsStorage {
@@ -343,7 +343,7 @@ index 7b9d45bc1..76b233e29 100644
      fun loadAutoShowSubtitlesOnMuteEnabled(): Boolean?
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/skip/MovieRecommendationCard.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/skip/MovieRecommendationCard.kt
 new file mode 100644
-index 000000000..bd79b56a0
+index 00000000..bd79b56a
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/skip/MovieRecommendationCard.kt
 @@ -0,0 +1,142 @@
@@ -490,10 +490,10 @@ index 000000000..bd79b56a0
 +    }
 +}
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/skip/PlayerNextEpisodeRules.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/skip/PlayerNextEpisodeRules.kt
-index 628b06f94..7d10d5252 100644
+index ab4fc72f..fc059f6c 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/skip/PlayerNextEpisodeRules.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/skip/PlayerNextEpisodeRules.kt
-@@ -101,6 +101,28 @@ object PlayerNextEpisodeRules {
+@@ -110,6 +110,28 @@ object PlayerNextEpisodeRules {
          }
      }
  
@@ -523,7 +523,7 @@ index 628b06f94..7d10d5252 100644
          val value = raw?.trim()?.takeIf { it.isNotEmpty() } ?: return true
          val dateStr = when {
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/PlaybackSettingsPage.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/PlaybackSettingsPage.kt
-index bf5083348..748da4ccd 100644
+index a753cbcf..697331f3 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/PlaybackSettingsPage.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/PlaybackSettingsPage.kt
 @@ -430,6 +430,14 @@ private fun PlaybackSettingsSection(
@@ -542,7 +542,7 @@ index bf5083348..748da4ccd 100644
                  SettingsNavigationRow(
                      title = stringResource(Res.string.settings_playback_player_preference),
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/SettingsSearch.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/SettingsSearch.kt
-index 96f798a56..254fea0a1 100644
+index 96f798a5..254fea0a 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/SettingsSearch.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/SettingsSearch.kt
 @@ -596,6 +596,11 @@ internal fun settingsSearchEntries(
@@ -558,7 +558,7 @@ index 96f798a56..254fea0a1 100644
          ),
      )
 diff --git a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.ios.kt b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.ios.kt
-index be854a276..14c055e94 100644
+index be854a27..14c055e9 100644
 --- a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.ios.kt
 +++ b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.ios.kt
 @@ -28,6 +28,7 @@ actual object PlayerSettingsStorage {

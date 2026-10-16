@@ -1,8 +1,8 @@
 diff --git a/composeApp/src/androidMain/kotlin/com/nuvio/app/MainActivity.kt b/composeApp/src/androidMain/kotlin/com/nuvio/app/MainActivity.kt
-index 2ecdbeb5b..21539099b 100644
+index eee68bdd..e8a9b417 100644
 --- a/composeApp/src/androidMain/kotlin/com/nuvio/app/MainActivity.kt
 +++ b/composeApp/src/androidMain/kotlin/com/nuvio/app/MainActivity.kt
-@@ -27,6 +27,7 @@ import com.nuvio.app.features.library.LibraryDisplaySettingsStorage
+@@ -28,6 +28,7 @@ import com.nuvio.app.features.library.LibraryDisplaySettingsStorage
  import com.nuvio.app.features.membership.MemberAssetStorage
  import com.nuvio.app.features.library.LibraryStorage
  import com.nuvio.app.features.details.MetaScreenSettingsStorage
@@ -10,7 +10,7 @@ index 2ecdbeb5b..21539099b 100644
  import com.nuvio.app.features.home.HomeCatalogSettingsStorage
  import com.nuvio.app.features.mdblist.MdbListSettingsStorage
  import com.nuvio.app.features.notifications.EpisodeReleaseNotificationPlatform
-@@ -117,6 +118,7 @@ open class MainActivity : AppCompatActivity() {
+@@ -119,6 +120,7 @@ open class MainActivity : AppCompatActivity() {
          CardDepthStyleStorage.initialize(applicationContext)
          DebridSettingsStorage.initialize(applicationContext)
          TmdbSettingsStorage.initialize(applicationContext)
@@ -20,7 +20,7 @@ index 2ecdbeb5b..21539099b 100644
          TraktCommentsStorage.initialize(applicationContext)
 diff --git a/composeApp/src/androidMain/kotlin/com/nuvio/app/features/ratings/UserRatingsStorage.android.kt b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/ratings/UserRatingsStorage.android.kt
 new file mode 100644
-index 000000000..67697e527
+index 00000000..67697e52
 --- /dev/null
 +++ b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/ratings/UserRatingsStorage.android.kt
 @@ -0,0 +1,23 @@
@@ -48,7 +48,7 @@ index 000000000..67697e527
 +    }
 +}
 diff --git a/composeApp/src/commonMain/composeResources/values/strings.xml b/composeApp/src/commonMain/composeResources/values/strings.xml
-index ca9e6058b..f25f397f8 100644
+index ca9e6058..f25f397f 100644
 --- a/composeApp/src/commonMain/composeResources/values/strings.xml
 +++ b/composeApp/src/commonMain/composeResources/values/strings.xml
 @@ -2478,4 +2478,21 @@
@@ -74,7 +74,7 @@ index ca9e6058b..f25f397f8 100644
 +    <string name="user_rating_no_provider">Turn on at least one service to save ratings</string>
  </resources>
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/core/tracking/TrackingProviderBootstrap.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/core/tracking/TrackingProviderBootstrap.kt
-index a4af5d7a5..47896f0fd 100644
+index a4af5d7a..47896f0f 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/core/tracking/TrackingProviderBootstrap.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/core/tracking/TrackingProviderBootstrap.kt
 @@ -8,9 +8,11 @@ import com.nuvio.app.features.simkl.SimklTrackingLibraryProvider
@@ -97,7 +97,7 @@ index a4af5d7a5..47896f0fd 100644
 +    TrackingProviderRegistry.registerRatingProvider(SimklRatingsProvider)
  }
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/MetaDetailsScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/MetaDetailsScreen.kt
-index 30fc30618..04a24b0ec 100644
+index 30fc3061..04a24b0e 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/MetaDetailsScreen.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/MetaDetailsScreen.kt
 @@ -33,6 +33,15 @@ import androidx.compose.foundation.lazy.rememberLazyListState
@@ -334,7 +334,7 @@ index 30fc30618..04a24b0ec 100644
                      shuffleEnabled = shuffleEnabled,
                      onPlayClick = onPrimaryPlayClick,
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/DetailActionButtons.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/DetailActionButtons.kt
-index 2c7faff4c..e7bb056c6 100644
+index 2c7faff4..e7bb056c 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/DetailActionButtons.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/DetailActionButtons.kt
 @@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
@@ -434,7 +434,7 @@ index 2c7faff4c..e7bb056c6 100644
  
  @Composable
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/DetailSeriesContent.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/DetailSeriesContent.kt
-index aa1c2dbae..cce085d4e 100644
+index aa1c2dba..cce085d4 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/DetailSeriesContent.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/DetailSeriesContent.kt
 @@ -37,7 +37,12 @@ import androidx.compose.foundation.lazy.itemsIndexed
@@ -604,7 +604,7 @@ index aa1c2dbae..cce085d4e 100644
                  }
  
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/EpisodeWatchedActionSheet.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/EpisodeWatchedActionSheet.kt
-index d2f617998..1dcddcd2f 100644
+index d2f61799..1dcddcd2 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/EpisodeWatchedActionSheet.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/EpisodeWatchedActionSheet.kt
 @@ -9,6 +9,8 @@ import androidx.compose.material.icons.filled.CheckCircle
@@ -714,7 +714,7 @@ index d2f617998..1dcddcd2f 100644
      episode: MetaVideo,
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/mdblist/MdbListRatingsProvider.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/mdblist/MdbListRatingsProvider.kt
 new file mode 100644
-index 000000000..fd723acc6
+index 00000000..fd723acc
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/mdblist/MdbListRatingsProvider.kt
 @@ -0,0 +1,167 @@
@@ -886,7 +886,7 @@ index 000000000..fd723acc6
 +    }
 +}
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/mdblist/MdbListTracker.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/mdblist/MdbListTracker.kt
-index f6e778871..09f5c9f78 100644
+index f6e77887..09f5c9f7 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/mdblist/MdbListTracker.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/mdblist/MdbListTracker.kt
 @@ -36,13 +36,14 @@ object MdbListTracker : TrackingAuthProvider {
@@ -914,10 +914,10 @@ index f6e778871..09f5c9f78 100644
  
      override fun ensureLoaded() {
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerControlActions.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerControlActions.kt
-index 6b0c5416b..4b2d6c70e 100644
+index c7718c89..13adb244 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerControlActions.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerControlActions.kt
-@@ -25,6 +25,8 @@ import androidx.compose.material.icons.rounded.LockOpen
+@@ -26,6 +26,8 @@ import androidx.compose.material.icons.rounded.LockOpen
  import androidx.compose.material.icons.rounded.SkipNext
  import androidx.compose.material.icons.rounded.Speed
  import androidx.compose.material.icons.rounded.SwapHoriz
@@ -926,7 +926,7 @@ index 6b0c5416b..4b2d6c70e 100644
  import androidx.compose.material3.Icon
  import androidx.compose.material3.IconButton
  import androidx.compose.material3.MaterialTheme
-@@ -101,6 +103,8 @@ internal fun PlayerControlActions(
+@@ -112,6 +114,8 @@ internal fun PlayerControlActions(
      onOpenInExternalPlayer: (() -> Unit)?,
      onStreamInfoClick: () -> Unit,
      onSubmitIntroClick: (() -> Unit)?,
@@ -935,7 +935,7 @@ index 6b0c5416b..4b2d6c70e 100644
      onInteraction: () -> Unit,
  ) {
      val actions = listOfNotNull(
-@@ -136,6 +140,14 @@ internal fun PlayerControlActions(
+@@ -147,6 +151,14 @@ internal fun PlayerControlActions(
                  icon = Icons.Rounded.SwapHoriz,
              )
          },
@@ -951,19 +951,19 @@ index 6b0c5416b..4b2d6c70e 100644
              "${stringResource(Res.string.compose_player_speed)} ${formatPlaybackSpeedLabel(playbackSnapshot.playbackSpeed)}",
              onSpeedClick, icon = Icons.Rounded.Speed,
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerControls.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerControls.kt
-index 225e866dc..99d741253 100644
+index 67f7cf74..72c42758 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerControls.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerControls.kt
-@@ -30,6 +30,8 @@ import androidx.compose.material.icons.filled.SwapHoriz
- import androidx.compose.material.icons.rounded.Build
+@@ -31,6 +31,8 @@ import androidx.compose.material.icons.rounded.Build
  import androidx.compose.material.icons.rounded.Flag
+ import androidx.compose.material.icons.rounded.Groups
  import androidx.compose.material.icons.rounded.Forward10
 +import androidx.compose.material.icons.rounded.StarBorder
 +import androidx.compose.material.icons.rounded.Star
  import androidx.compose.material.icons.rounded.Lock
  import androidx.compose.material.icons.rounded.LockOpen
  import androidx.compose.material.icons.rounded.Replay10
-@@ -107,6 +109,8 @@ internal fun PlayerControlsShell(
+@@ -111,6 +113,8 @@ internal fun PlayerControlsShell(
      onSubtitleClick: () -> Unit,
      onAudioClick: () -> Unit,
      onVideoSettingsClick: (() -> Unit)? = null,
@@ -972,16 +972,16 @@ index 225e866dc..99d741253 100644
      onSourcesClick: (() -> Unit)? = null,
      onEpisodesClick: (() -> Unit)? = null,
      onOpenInExternalPlayer: (() -> Unit)? = null,
-@@ -181,6 +185,8 @@ internal fun PlayerControlsShell(
+@@ -185,6 +189,8 @@ internal fun PlayerControlsShell(
                      onParentalGuideAnimationComplete = onParentalGuideAnimationComplete,
                      onLockToggle = onLockToggle,
                      onVideoSettingsClick = onVideoSettingsClick,
 +                    onRateClick = onRateClick,
 +                    userRating = userRating,
                      onOpenInExternalPlayer = onOpenInExternalPlayer,
-                     onBack = onBack,
-                     modifier = Modifier
-@@ -311,6 +317,8 @@ internal fun PlayerControlsShell(
+                     onPartyClick = onPartyClick,
+                     partyActive = partyActive,
+@@ -319,6 +325,8 @@ internal fun PlayerControlsShell(
                          onOpenInExternalPlayer = onOpenInExternalPlayer,
                          onStreamInfoClick = onStreamInfoClick,
                          onSubmitIntroClick = onSubmitIntroClick,
@@ -990,16 +990,16 @@ index 225e866dc..99d741253 100644
                          onInteraction = onInteraction,
                      )
                  }
-@@ -336,6 +344,8 @@ private fun PlayerHeader(
+@@ -344,6 +352,8 @@ private fun PlayerHeader(
      onParentalGuideAnimationComplete: () -> Unit,
      onLockToggle: () -> Unit,
      onVideoSettingsClick: (() -> Unit)?,
 +    onRateClick: (() -> Unit)? = null,
 +    userRating: Int? = null,
      onOpenInExternalPlayer: (() -> Unit)?,
-     onBack: () -> Unit,
-     modifier: Modifier = Modifier,
-@@ -465,6 +475,17 @@ private fun PlayerHeader(
+     onPartyClick: (() -> Unit)?,
+     partyActive: Boolean,
+@@ -486,6 +496,17 @@ private fun PlayerHeader(
                              onClick = onVideoSettingsClick,
                          )
                      }
@@ -1018,10 +1018,10 @@ index 225e866dc..99d741253 100644
                          onClick = onBack,
                          containerColor = Color.Black.copy(alpha = 0.35f),
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeGestureActions.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeGestureActions.kt
-index e4dd9aaf5..f83101abd 100644
+index 9f724814..4de8bf11 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeGestureActions.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeGestureActions.kt
-@@ -67,6 +67,7 @@ internal fun PlayerScreenRuntime.lockPlayerControls() {
+@@ -69,6 +69,7 @@ internal fun PlayerScreenRuntime.lockPlayerControls() {
      showSubtitleModal = false
      showVideoSettingsModal = false
      showStreamInfo = false
@@ -1030,11 +1030,11 @@ index e4dd9aaf5..f83101abd 100644
      showEpisodesPanel = false
      episodeStreamsPanelState = EpisodeStreamsPanelState()
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeState.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeState.kt
-index d4c77a4de..ec368cad4 100644
+index 11b6d670..1da84283 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeState.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeState.kt
-@@ -199,6 +199,7 @@ internal class PlayerScreenRuntime(
-     var showStreamInfo by mutableStateOf(false)
+@@ -210,6 +210,7 @@ internal class PlayerScreenRuntime(
+     var pendingSeekTarget: Pair<Long, TimeMark>? = null
      var streamMediaInfo by mutableStateOf(PlayerMediaInfo())
      var playbackEngineOverride by mutableStateOf<AndroidPlaybackEngine?>(null)
 +    var showUserRatingSheet by mutableStateOf(false)
@@ -1042,10 +1042,10 @@ index d4c77a4de..ec368cad4 100644
      var serverAudioTracks by mutableStateOf<List<AudioTrack>>(emptyList())
      var serverSubtitleTracks by mutableStateOf<List<SubtitleTrack>>(emptyList())
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeUi.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeUi.kt
-index 6c081f9eb..df90b7677 100644
+index 179420b0..57e1dcea 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeUi.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeUi.kt
-@@ -29,6 +29,12 @@ import com.nuvio.app.features.servers.ServerStreams
+@@ -32,6 +32,12 @@ import com.nuvio.app.features.servers.ServerStreams
  import com.nuvio.app.features.streams.streamAddonInstanceId
  import com.nuvio.app.isIos
  import kotlinx.coroutines.launch
@@ -1058,17 +1058,17 @@ index 6c081f9eb..df90b7677 100644
  import nuvio.composeapp.generated.resources.*
  
  @Composable
-@@ -286,6 +292,9 @@ private fun PlayerScreenRuntime.currentInitialPositionRequestKey(): String? {
- @Composable
- private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, isEpisode: Boolean) {
+@@ -294,6 +300,9 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long,
      val isInPip = rememberIsInPictureInPicture()
+     val partyState by PartyRepository.state.collectAsStateWithLifecycle()
+     val partyActive = partyState.party != null
 +    val userRatingTarget = currentUserRatingTarget()
 +    val canRate = rememberCanRate(userRatingTarget)
 +    val userRating = rememberUserRating(userRatingTarget.takeIf { canRate })
      AnimatedVisibility(
          visible = (controlsVisible || showParentalGuide) && !playerControlsLocked && !isInPip,
          enter = fadeIn(),
-@@ -335,6 +344,10 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long,
+@@ -352,6 +361,10 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long,
                  refreshTracks()
                  showAudioModal = true
              },
@@ -1079,7 +1079,7 @@ index 6c081f9eb..df90b7677 100644
              onVideoSettingsClick = if (isIos) {
                  {
                      showVideoSettingsModal = true
-@@ -713,8 +726,36 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
+@@ -741,8 +754,36 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
          addonSubtitle = selectedAddonSubtitle.takeIf { useCustomSubtitles },
          onDismiss = { showStreamInfo = false },
      )
@@ -1118,7 +1118,7 @@ index 6c081f9eb..df90b7677 100644
  internal val PlayerScreenRuntime.movieRecommendationCandidates: List<MetaPreview>
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/ratings/UserRatingSheet.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/ratings/UserRatingSheet.kt
 new file mode 100644
-index 000000000..ee10b3437
+index 00000000..ee10b343
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/ratings/UserRatingSheet.kt
 @@ -0,0 +1,448 @@
@@ -1572,7 +1572,7 @@ index 000000000..ee10b3437
 +)
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/ratings/UserRatingStars.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/ratings/UserRatingStars.kt
 new file mode 100644
-index 000000000..e47ac9c0e
+index 00000000..e47ac9c0
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/ratings/UserRatingStars.kt
 @@ -0,0 +1,408 @@
@@ -1986,7 +1986,7 @@ index 000000000..e47ac9c0e
 +}
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/ratings/UserRatingTargets.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/ratings/UserRatingTargets.kt
 new file mode 100644
-index 000000000..b95f16923
+index 00000000..b95f1692
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/ratings/UserRatingTargets.kt
 @@ -0,0 +1,80 @@
@@ -2072,7 +2072,7 @@ index 000000000..b95f16923
 +)
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/ratings/UserRatingsRepository.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/ratings/UserRatingsRepository.kt
 new file mode 100644
-index 000000000..f42fa5f02
+index 00000000..f42fa5f0
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/ratings/UserRatingsRepository.kt
 @@ -0,0 +1,322 @@
@@ -2400,7 +2400,7 @@ index 000000000..f42fa5f02
 +}
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/ratings/UserRatingsStorage.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/ratings/UserRatingsStorage.kt
 new file mode 100644
-index 000000000..42cd67a99
+index 00000000..42cd67a9
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/ratings/UserRatingsStorage.kt
 @@ -0,0 +1,10 @@
@@ -2415,7 +2415,7 @@ index 000000000..42cd67a99
 +    fun saveDisabledProviders(profileId: Int, value: String)
 +}
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklAuthRepository.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklAuthRepository.kt
-index 67f82081d..f281c4f56 100644
+index 67f82081..f281c4f5 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklAuthRepository.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklAuthRepository.kt
 @@ -51,6 +51,7 @@ object SimklAuthRepository : TrackingAuthProvider {
@@ -2428,7 +2428,7 @@ index 67f82081d..f281c4f56 100644
  
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklRatingsProvider.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklRatingsProvider.kt
 new file mode 100644
-index 000000000..b9d09e494
+index 00000000..b9d09e49
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklRatingsProvider.kt
 @@ -0,0 +1,127 @@
@@ -2560,7 +2560,7 @@ index 000000000..b9d09e494
 +    }
 +}
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tracking/TrackingProvider.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tracking/TrackingProvider.kt
-index 6218fb193..c3eeeec15 100644
+index 6218fb19..c3eeeec1 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tracking/TrackingProvider.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tracking/TrackingProvider.kt
 @@ -41,6 +41,7 @@ enum class TrackingCapability {
@@ -2599,7 +2599,7 @@ index 6218fb193..c3eeeec15 100644
      }
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tracking/TrackingRatings.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tracking/TrackingRatings.kt
 new file mode 100644
-index 000000000..1a8d68b19
+index 00000000..1a8d68b1
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tracking/TrackingRatings.kt
 @@ -0,0 +1,152 @@
@@ -2756,7 +2756,7 @@ index 000000000..1a8d68b19
 +        }
 +    } ?: 0
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/trakt/TraktAuthRepository.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/trakt/TraktAuthRepository.kt
-index 548e4af38..6b3893e1a 100644
+index 548e4af3..6b3893e1 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/trakt/TraktAuthRepository.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/trakt/TraktAuthRepository.kt
 @@ -66,6 +66,7 @@ object TraktAuthRepository : TrackingAuthProvider {
@@ -2769,7 +2769,7 @@ index 548e4af38..6b3893e1a 100644
  
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/trakt/TraktRatingsProvider.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/trakt/TraktRatingsProvider.kt
 new file mode 100644
-index 000000000..152fde858
+index 00000000..152fde85
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/trakt/TraktRatingsProvider.kt
 @@ -0,0 +1,211 @@
@@ -2986,7 +2986,7 @@ index 000000000..152fde858
 +}
 diff --git a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/ratings/UserRatingsStorage.ios.kt b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/ratings/UserRatingsStorage.ios.kt
 new file mode 100644
-index 000000000..7d06fc930
+index 00000000..7d06fc93
 --- /dev/null
 +++ b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/ratings/UserRatingsStorage.ios.kt
 @@ -0,0 +1,14 @@

@@ -1,5 +1,5 @@
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/InfusePlayback.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/InfusePlayback.kt
-index 14291068d..49555442f 100644
+index 14291068..49555442 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/InfusePlayback.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/InfusePlayback.kt
 @@ -1,6 +1,7 @@

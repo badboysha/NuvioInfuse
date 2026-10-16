@@ -1,5 +1,5 @@
 diff --git a/composeApp/src/androidMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.android.kt b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.android.kt
-index 4b80b89be..26cc7c0c6 100644
+index 4b80b89b..26cc7c0c 100644
 --- a/composeApp/src/androidMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.android.kt
 +++ b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.android.kt
 @@ -30,6 +30,8 @@ actual object PlayerSettingsStorage {
@@ -71,7 +71,7 @@ index 4b80b89be..26cc7c0c6 100644
          payload.decodeSyncBoolean(externalPlayerForwardSubtitlesKey)?.let(::saveExternalPlayerForwardSubtitles)
          payload.decodeSyncBoolean(externalPlayerSendSkipSegmentsKey)?.let(::saveExternalPlayerSendSkipSegments)
 diff --git a/composeApp/src/commonMain/composeResources/values/strings.xml b/composeApp/src/commonMain/composeResources/values/strings.xml
-index 1d228094b..28d798fd9 100644
+index 1d228094..28d798fd 100644
 --- a/composeApp/src/commonMain/composeResources/values/strings.xml
 +++ b/composeApp/src/commonMain/composeResources/values/strings.xml
 @@ -2472,4 +2472,8 @@
@@ -85,7 +85,7 @@ index 1d228094b..28d798fd9 100644
  </resources>
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeAutoSubtitles.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeAutoSubtitles.kt
 new file mode 100644
-index 000000000..dd8656ae9
+index 00000000..dd8656ae
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeAutoSubtitles.kt
 @@ -0,0 +1,115 @@
@@ -205,10 +205,10 @@ index 000000000..dd8656ae9
 +    isAutoSubtitleMuteActive = false
 +}
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeEffects.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeEffects.kt
-index 696a0a6e0..5ef869902 100644
+index 0bedc258..e2134f14 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeEffects.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeEffects.kt
-@@ -107,6 +107,8 @@ internal fun PlayerScreenRuntime.BindPlayerRuntimeEffects() {
+@@ -108,6 +108,8 @@ internal fun PlayerScreenRuntime.BindPlayerRuntimeEffects() {
          isUserExplicitAudioSelection = false
          isUserExplicitSubtitleSelection = false
          hasScannedTextTracksOnce = false
@@ -218,10 +218,10 @@ index 696a0a6e0..5ef869902 100644
          selectedAddonSubtitleId = null
          useCustomSubtitles = false
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeGestureActions.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeGestureActions.kt
-index d54bb1eed..e4dd9aaf5 100644
+index 9ca6dccd..9f724814 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeGestureActions.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeGestureActions.kt
-@@ -136,6 +136,7 @@ internal fun PlayerScreenRuntime.showBrightnessFeedback(level: Float) {
+@@ -138,6 +138,7 @@ internal fun PlayerScreenRuntime.showBrightnessFeedback(level: Float) {
  }
  
  internal fun PlayerScreenRuntime.showVolumeFeedback(level: PlayerAudioLevel) {
@@ -229,15 +229,15 @@ index d54bb1eed..e4dd9aaf5 100644
      val percentage = (level.fraction.coerceIn(0f, 1f) * 100f).roundToInt()
      showGestureFeedback(
          GestureFeedbackState(
-@@ -167,6 +168,7 @@ internal fun PlayerScreenRuntime.togglePlayback() {
+@@ -174,6 +175,7 @@ internal fun PlayerScreenRuntime.togglePlayback() {
  }
  
  internal fun PlayerScreenRuntime.seekBy(offsetMs: Long) {
 +    val fromPositionMs = playbackSnapshot.positionMs.coerceAtLeast(0L)
-     val fromMs = playbackSnapshot.positionMs
-     val targetMs = (fromMs + offsetMs).coerceAtLeast(0L)
-         .let { if (playbackSnapshot.durationMs > 0L) it.coerceAtMost(playbackSnapshot.durationMs) else it }
-@@ -176,7 +178,10 @@ internal fun PlayerScreenRuntime.seekBy(offsetMs: Long) {
+     val fromMs = pendingSeekTarget
+         ?.takeIf { (_, mark) -> mark.elapsedNow() < PendingSeekWindow }
+         ?.first
+@@ -189,7 +191,10 @@ internal fun PlayerScreenRuntime.seekBy(offsetMs: Long) {
      controlsVisible = true
      when {
          offsetMs > 0L -> showSeekFeedback(PlayerSeekDirection.Forward, offsetMs)
@@ -249,9 +249,9 @@ index d54bb1eed..e4dd9aaf5 100644
      }
  }
  
-@@ -208,6 +213,9 @@ internal fun PlayerScreenRuntime.handleDoubleTapSeek(direction: PlayerSeekDirect
-     playerController?.seekTo(targetPositionMs)
+@@ -222,6 +227,9 @@ internal fun PlayerScreenRuntime.handleDoubleTapSeek(direction: PlayerSeekDirect
      scheduleProgressSyncAfterSeek()
+     publishPartyPlayback(positionMs = targetPositionMs)
      showSeekFeedback(direction, nextState.amountMs)
 +    if (direction == PlayerSeekDirection.Backward) {
 +        notifyRewindOccurred(nextState.baselinePositionMs)
@@ -259,14 +259,18 @@ index d54bb1eed..e4dd9aaf5 100644
  
      accumulatedSeekResetJob?.cancel()
      accumulatedSeekResetJob = scope.launch {
-@@ -317,9 +325,13 @@ internal fun PlayerScreenRuntime.rememberSurfaceGestureCallbacks(): PlayerSurfac
+@@ -335,6 +343,7 @@ internal fun PlayerScreenRuntime.rememberSurfaceGestureCallbacks(): PlayerSurfac
          currentPositionMs = rememberUpdatedState(playbackSnapshot.positionMs.coerceAtLeast(0L)),
          currentDurationMs = rememberUpdatedState(playbackSnapshot.durationMs),
-         commitHorizontalSeek = rememberUpdatedState { targetPositionMs: Long ->
+         commitHorizontalSeek = rememberUpdatedState { requestedPositionMs: Long ->
 +            val fromPositionMs = playbackSnapshot.positionMs.coerceAtLeast(0L)
-             lastManualSkipSeekPositions = playbackSnapshot.positionMs to targetPositionMs
+             val targetPositionMs = if (isPartyControlLocked) {
+                 ownSeekTarget(requestedPositionMs) ?: return@rememberUpdatedState
+             } else {
+@@ -344,6 +353,9 @@ internal fun PlayerScreenRuntime.rememberSurfaceGestureCallbacks(): PlayerSurfac
              playerController?.seekTo(targetPositionMs)
              scheduleProgressSyncAfterSeek()
+             publishPartyPlayback(positionMs = targetPositionMs)
 +            if (targetPositionMs < fromPositionMs) {
 +                notifyRewindOccurred(fromPositionMs)
 +            }
@@ -274,10 +278,10 @@ index d54bb1eed..e4dd9aaf5 100644
      )
  }
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimePlaybackActions.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimePlaybackActions.kt
-index 49305170c..b00468425 100644
+index eb8a6655..a7fc85f0 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimePlaybackActions.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimePlaybackActions.kt
-@@ -142,6 +142,8 @@ internal fun PlayerScreenRuntime.resetIdentityStateIfNeeded() {
+@@ -146,6 +146,8 @@ internal fun PlayerScreenRuntime.resetIdentityStateIfNeeded() {
          isUserExplicitAudioSelection = false
          isUserExplicitSubtitleSelection = false
          hasScannedTextTracksOnce = false
@@ -287,10 +291,10 @@ index 49305170c..b00468425 100644
  
      val videoIdentity = "$identity:$activeVideoId:$activeSeasonNumber:$activeEpisodeNumber"
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeState.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeState.kt
-index 7c2f5e155..8518570ae 100644
+index 24e95940..0a0be733 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeState.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeState.kt
-@@ -219,6 +219,11 @@ internal class PlayerScreenRuntime(
+@@ -230,6 +230,11 @@ internal class PlayerScreenRuntime(
      var showSubtitleSyncByEar by mutableStateOf(false)
      var subtitleSyncHeardPositionMs by mutableStateOf<Long?>(null)
      var subtitleSyncSawPositionMs by mutableStateOf<Long?>(null)
@@ -303,10 +307,10 @@ index 7c2f5e155..8518570ae 100644
      var lastSyncedSettingsResizeMode: PlayerResizeMode? = null
      var lastResetPlaybackIdentity: PlaybackKey? = null
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeUi.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeUi.kt
-index 44799ba6d..e49db7922 100644
+index 292a0c93..6d7f25be 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeUi.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeUi.kt
-@@ -186,6 +186,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
+@@ -191,6 +191,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
                      },
                      onSnapshot = { snapshot ->
                          if (!active.value || !updatePlaybackSnapshot(snapshot, playbackKey)) return@PlatformPlayerSurface
@@ -314,7 +318,7 @@ index 44799ba6d..e49db7922 100644
                          refreshAudioTracksIfChanged()
                          if (!snapshot.isLoading) initialLoadCompleted = true
                          if (snapshot.isEnded) {
-@@ -537,6 +538,7 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
+@@ -565,6 +566,7 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
          selectedAddonSubtitle = selectedAddonSubtitle,
          subtitleAutoSyncState = subtitleAutoSyncState,
          onBuiltInSubtitleTrackSelected = { index ->
@@ -322,7 +326,7 @@ index 44799ba6d..e49db7922 100644
              if (serverSubtitleTracks.isNotEmpty() && index >= 0) {
                  selectServerSubtitleTrack(index)
              } else {
-@@ -556,6 +558,7 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
+@@ -584,6 +586,7 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
              }
          },
          onAddonSubtitleSelected = { addon ->
@@ -331,7 +335,7 @@ index 44799ba6d..e49db7922 100644
              selectedAddonSubtitleId = addon.selectionKey
              selectedSubtitleIndex = -1
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerSettingsRepository.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerSettingsRepository.kt
-index 51a711335..7982499c4 100644
+index 51a71133..7982499c 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerSettingsRepository.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerSettingsRepository.kt
 @@ -42,6 +42,8 @@ data class PlayerSettingsUiState(
@@ -403,7 +407,7 @@ index 51a711335..7982499c4 100644
              externalPlayerForwardSubtitles = externalPlayerForwardSubtitles,
              externalPlayerSendSkipSegments = externalPlayerSendSkipSegments,
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.kt
-index 94e982e34..7b9d45bc1 100644
+index 94e982e3..7b9d45bc 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.kt
 @@ -25,6 +25,10 @@ internal expect object PlayerSettingsStorage {
@@ -418,10 +422,10 @@ index 94e982e34..7b9d45bc1 100644
      fun saveExternalPlayerEnabled(enabled: Boolean)
      fun loadExternalPlayerForwardSubtitles(): Boolean?
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/PlaybackSettingsPage.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/PlaybackSettingsPage.kt
-index 38acfa08e..bf5083348 100644
+index 2c277ffe..a753cbcf 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/PlaybackSettingsPage.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/PlaybackSettingsPage.kt
-@@ -599,6 +599,24 @@ private fun PlaybackSettingsSection(
+@@ -607,6 +607,24 @@ private fun PlaybackSettingsSection(
                          )
                      },
                  )
@@ -447,7 +451,7 @@ index 38acfa08e..bf5083348 100644
          }
  
 diff --git a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.ios.kt b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.ios.kt
-index ba3c51f5a..be854a276 100644
+index ba3c51f5..be854a27 100644
 --- a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.ios.kt
 +++ b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.ios.kt
 @@ -28,6 +28,8 @@ actual object PlayerSettingsStorage {

@@ -1,8 +1,8 @@
 diff --git a/composeApp/src/androidMain/kotlin/com/nuvio/app/MainActivity.kt b/composeApp/src/androidMain/kotlin/com/nuvio/app/MainActivity.kt
-index 21539099b..88f580863 100644
+index e8a9b417..ab51f8bc 100644
 --- a/composeApp/src/androidMain/kotlin/com/nuvio/app/MainActivity.kt
 +++ b/composeApp/src/androidMain/kotlin/com/nuvio/app/MainActivity.kt
-@@ -140,6 +140,7 @@ open class MainActivity : AppCompatActivity() {
+@@ -142,6 +142,7 @@ open class MainActivity : AppCompatActivity() {
          BingeGroupCacheStorage.initialize(applicationContext)
          PluginStorage.initialize(applicationContext)
          CollectionMobileSettingsStorage.initialize(applicationContext)
@@ -12,7 +12,7 @@ index 21539099b..88f580863 100644
          DownloadsPlatformDownloader.initialize(applicationContext)
 diff --git a/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt
 new file mode 100644
-index 000000000..369e181b4
+index 00000000..369e181b
 --- /dev/null
 +++ b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt
 @@ -0,0 +1,22 @@
@@ -40,7 +40,7 @@ index 000000000..369e181b4
 +}
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
 new file mode 100644
-index 000000000..202c229de
+index 00000000..202c229d
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
 @@ -0,0 +1,29 @@
@@ -74,7 +74,7 @@ index 000000000..202c229de
 +    }
 +}
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
-index 12a3bcc6b..85a943ccc 100644
+index 8ead148d..0a315ef0 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
 @@ -323,8 +323,13 @@ fun HomeScreen(
@@ -94,7 +94,7 @@ index 12a3bcc6b..85a943ccc 100644
  
      LaunchedEffect(activeProfileId, continueWatchingListState) {
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt
-index 45549f1ec..781911e46 100644
+index 45549f1e..781911e4 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt
 @@ -40,6 +40,8 @@ import com.nuvio.app.core.ui.NuvioToastController
@@ -134,7 +134,7 @@ index 45549f1ec..781911e46 100644
                      items = items,
 diff --git a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt
 new file mode 100644
-index 000000000..9d7125b02
+index 00000000..9d7125b0
 --- /dev/null
 +++ b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt
 @@ -0,0 +1,16 @@

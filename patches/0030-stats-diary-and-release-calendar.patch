@@ -1,6 +1,6 @@
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/library/ForkInsights.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/library/ForkInsights.kt
 new file mode 100644
-index 000000000..217a8b875
+index 00000000..217a8b87
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/library/ForkInsights.kt
 @@ -0,0 +1,236 @@
@@ -242,7 +242,7 @@ index 000000000..217a8b875
 +}
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/library/ForkInsightsScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/library/ForkInsightsScreen.kt
 new file mode 100644
-index 000000000..9f211a9fa
+index 00000000..9f211a9f
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/library/ForkInsightsScreen.kt
 @@ -0,0 +1,270 @@
@@ -517,7 +517,7 @@ index 000000000..9f211a9fa
 +    return "${MonthNames[m - 1].take(3)} $d"
 +}
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/library/LibraryScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/library/LibraryScreen.kt
-index 8062f7566..185ce8fb7 100644
+index 8062f756..185ce8fb 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/library/LibraryScreen.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/library/LibraryScreen.kt
 @@ -35,6 +35,8 @@ import androidx.compose.material.icons.rounded.ViewAgenda

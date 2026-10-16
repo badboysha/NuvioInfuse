@@ -1,5 +1,5 @@
 diff --git a/composeApp/src/commonMain/composeResources/values/strings.xml b/composeApp/src/commonMain/composeResources/values/strings.xml
-index 6c34620a9..1d228094b 100644
+index 6c34620a..1d228094 100644
 --- a/composeApp/src/commonMain/composeResources/values/strings.xml
 +++ b/composeApp/src/commonMain/composeResources/values/strings.xml
 @@ -2464,4 +2464,12 @@
@@ -16,7 +16,7 @@ index 6c34620a9..1d228094b 100644
 +    <string name="compose_player_sync_by_ear_waiting_heard">Saw captured. Tap Heard when you hear the line.</string>
  </resources>
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenModalHosts.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenModalHosts.kt
-index b3665232a..06bab18c5 100644
+index b3665232..06bab18c 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenModalHosts.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenModalHosts.kt
 @@ -40,6 +40,7 @@ internal fun PlayerScreenModalHosts(
@@ -36,10 +36,10 @@ index b3665232a..06bab18c5 100644
          onAutoSyncCueSelected = onAutoSyncCueSelected,
          onAutoSyncReload = onAutoSyncReload,
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeState.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeState.kt
-index 650f1f315..7c2f5e155 100644
+index 25904560..24e95940 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeState.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeState.kt
-@@ -216,6 +216,9 @@ internal class PlayerScreenRuntime(
+@@ -227,6 +227,9 @@ internal class PlayerScreenRuntime(
      var trackPreferenceRestoreApplied by mutableStateOf(false)
      var subtitleDelayMs by mutableStateOf(0)
      var subtitleAutoSyncState by mutableStateOf(SubtitleAutoSyncUiState())
@@ -50,10 +50,10 @@ index 650f1f315..7c2f5e155 100644
      var lastSyncedSettingsResizeMode: PlayerResizeMode? = null
      var lastResetPlaybackIdentity: PlaybackKey? = null
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeSubtitleActions.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeSubtitleActions.kt
-index 43f2b06ec..8d8a5c84a 100644
+index ce4d1eca..ae0b7389 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeSubtitleActions.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeSubtitleActions.kt
-@@ -67,3 +67,37 @@ internal fun PlayerScreenRuntime.applySubtitleAutoSyncCue(cue: SubtitleSyncCue)
+@@ -69,3 +69,37 @@ internal fun PlayerScreenRuntime.applySubtitleAutoSyncCue(cue: SubtitleSyncCue)
          .coerceIn(SUBTITLE_DELAY_MIN_MS, SUBTITLE_DELAY_MAX_MS)
      setSubtitleDelay(newDelayMs)
  }
@@ -92,10 +92,10 @@ index 43f2b06ec..8d8a5c84a 100644
 +    subtitleSyncSawPositionMs = null
 +}
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeUi.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeUi.kt
-index e425be165..44799ba6d 100644
+index 48683112..292a0c93 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeUi.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeUi.kt
-@@ -7,11 +7,15 @@ import androidx.compose.animation.fadeOut
+@@ -7,12 +7,16 @@ import androidx.compose.animation.fadeOut
  import androidx.compose.foundation.layout.Box
  import androidx.compose.foundation.layout.BoxScope
  import androidx.compose.foundation.layout.fillMaxSize
@@ -103,6 +103,7 @@ index e425be165..44799ba6d 100644
 +import androidx.compose.ui.unit.dp
  import androidx.compose.runtime.Composable
  import androidx.compose.runtime.DisposableEffect
+ import androidx.compose.runtime.getValue
  import androidx.compose.runtime.key
  import androidx.compose.runtime.mutableStateOf
  import androidx.compose.runtime.remember
@@ -110,8 +111,8 @@ index e425be165..44799ba6d 100644
 +import androidx.compose.ui.Alignment
  import androidx.compose.ui.Modifier
  import androidx.compose.ui.layout.onSizeChanged
- import com.nuvio.app.features.p2p.P2pStreamingState
-@@ -236,6 +240,18 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
+ import androidx.lifecycle.compose.collectAsStateWithLifecycle
+@@ -241,6 +245,18 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
              p2pRebufferMessage = p2pRebufferMessage,
              p2pRebufferProgress = p2pRebufferProgress,
          )
@@ -128,9 +129,9 @@ index e425be165..44799ba6d 100644
 +                .padding(top = 16.dp, start = horizontalSafePadding, end = horizontalSafePadding),
 +        )
          RenderPlayerModals(displayedPositionMs = displayedPositionMs)
+         RenderParty(runtime = runtime)
      }
- }
-@@ -553,6 +569,7 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
+@@ -581,6 +597,7 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
          onSubtitleStyleChanged = PlayerSettingsRepository::setSubtitleStyle,
          onSubtitleDelayChanged = { delayMs -> setSubtitleDelay(delayMs) },
          onSubtitleDelayReset = { setSubtitleDelay(0) },
@@ -139,10 +140,10 @@ index e425be165..44799ba6d 100644
          onAutoSyncCueSelected = { cue -> applySubtitleAutoSyncCue(cue) },
          onAutoSyncReload = { loadSubtitleAutoSyncCues(force = true) },
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/SubtitleModal.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/SubtitleModal.kt
-index 1c6216724..6ade0dc0a 100644
+index c4042944..45f98b18 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/SubtitleModal.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/SubtitleModal.kt
-@@ -80,6 +80,7 @@ fun SubtitleModal(
+@@ -81,6 +81,7 @@ fun SubtitleModal(
      onStyleChanged: (SubtitleStyleState) -> Unit,
      onSubtitleDelayChanged: (Int) -> Unit,
      onSubtitleDelayReset: () -> Unit,
@@ -150,7 +151,7 @@ index 1c6216724..6ade0dc0a 100644
      onAutoSyncCapture: () -> Unit,
      onAutoSyncCueSelected: (SubtitleSyncCue) -> Unit,
      onAutoSyncReload: () -> Unit,
-@@ -308,6 +309,7 @@ fun SubtitleModal(
+@@ -309,6 +310,7 @@ fun SubtitleModal(
                                      onStyleChanged = onStyleChanged,
                                      onSubtitleDelayChanged = onSubtitleDelayChanged,
                                      onSubtitleDelayReset = onSubtitleDelayReset,
@@ -159,7 +160,7 @@ index 1c6216724..6ade0dc0a 100644
                                      onAutoSyncCueSelected = onAutoSyncCueSelected,
                                      onAutoSyncReload = onAutoSyncReload,
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/SubtitleStylePanel.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/SubtitleStylePanel.kt
-index 3abe98326..6a7b93169 100644
+index 3abe9832..6a7b9316 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/SubtitleStylePanel.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/SubtitleStylePanel.kt
 @@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
@@ -243,7 +244,7 @@ index 3abe98326..6a7b93169 100644
      label: String,
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/SubtitleSyncByEarCard.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/SubtitleSyncByEarCard.kt
 new file mode 100644
-index 000000000..86a2f72a2
+index 00000000..86a2f72a
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/SubtitleSyncByEarCard.kt
 @@ -0,0 +1,208 @@

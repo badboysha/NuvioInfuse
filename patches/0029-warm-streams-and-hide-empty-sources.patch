@@ -1,5 +1,5 @@
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalPlayerLaunchCoordinator.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalPlayerLaunchCoordinator.kt
-index 37c9974a6..382d1ca4d 100644
+index 37c9974a..382d1ca4 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalPlayerLaunchCoordinator.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalPlayerLaunchCoordinator.kt
 @@ -47,7 +47,7 @@ suspend fun prepareExternalPlayerLaunch(
@@ -13,7 +13,7 @@ index 37c9974a6..382d1ca4d 100644
      }
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/StreamWarmup.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/StreamWarmup.kt
 new file mode 100644
-index 000000000..7c07b278d
+index 00000000..7c07b278
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/StreamWarmup.kt
 @@ -0,0 +1,47 @@
@@ -65,10 +65,10 @@ index 000000000..7c07b278d
 +    }
 +}
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamsScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamsScreen.kt
-index 7ac8f1b8a..5b0267d0c 100644
+index c920162b..afa1b5c8 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamsScreen.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamsScreen.kt
-@@ -772,6 +772,18 @@ internal fun StreamList(
+@@ -773,6 +773,18 @@ internal fun StreamList(
          StreamBadgeSettingsRepository.uiState
      }.collectAsStateWithLifecycle()
  
@@ -87,7 +87,7 @@ index 7ac8f1b8a..5b0267d0c 100644
      CompositionLocalProvider(LocalStreamSizeLabelFormat provides formatStreamSize) {
      LazyColumn(
          modifier = modifier.fillMaxWidth(),
-@@ -843,7 +855,8 @@ private fun LazyListScope.streamSection(
+@@ -866,7 +878,8 @@ private fun LazyListScope.streamSection(
      resumePositionMs: Long?,
      resumeProgressFraction: Float?,
  ) {

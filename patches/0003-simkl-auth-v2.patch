@@ -1,5 +1,5 @@
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklApiMetadata.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklApiMetadata.kt
-index 99d1be261..df24d9b15 100644
+index 99d1be26..df24d9b1 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklApiMetadata.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklApiMetadata.kt
 @@ -4,7 +4,10 @@ import com.nuvio.app.core.build.AppVersionConfig
@@ -15,7 +15,7 @@ index 99d1be261..df24d9b15 100644
  internal val simklAppVersion: String
      get() = AppVersionConfig.VERSION_NAME.ifBlank { "dev" }
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklAuthModels.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklAuthModels.kt
-index 4d1dab0f2..0113ee562 100644
+index 4d1dab0f..0113ee56 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklAuthModels.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklAuthModels.kt
 @@ -36,6 +36,7 @@ internal data class SimklStoredAuthState(
@@ -27,7 +27,7 @@ index 4d1dab0f2..0113ee562 100644
      val pendingAuthorizationStartedAtEpochMs: Long? = null,
  ) {
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklAuthParsing.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklAuthParsing.kt
-index 9d2e46bc6..1bf683f27 100644
+index 9d2e46bc..1bf683f2 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklAuthParsing.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklAuthParsing.kt
 @@ -52,6 +52,8 @@ internal fun buildSimklAuthorizationUrl(
@@ -40,7 +40,7 @@ index 9d2e46bc6..1bf683f27 100644
      append(material.challenge.encodeURLParameter())
      append("&code_challenge_method=S256")
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklAuthRepository.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklAuthRepository.kt
-index d40816822..67f82081d 100644
+index d4081682..67f82081 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklAuthRepository.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklAuthRepository.kt
 @@ -174,7 +174,13 @@ object SimklAuthRepository : TrackingAuthProvider {

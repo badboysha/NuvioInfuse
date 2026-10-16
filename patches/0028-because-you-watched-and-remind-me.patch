@@ -1,5 +1,5 @@
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
-index bb5afd1b8..289649a80 100644
+index 8d3a2a1c..935be28d 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
 @@ -17,6 +17,8 @@ import androidx.compose.material.icons.filled.CheckCircle
@@ -11,7 +11,7 @@ index bb5afd1b8..289649a80 100644
  import androidx.compose.material.icons.filled.PlayArrow
  import androidx.compose.material.icons.filled.Replay
  import androidx.compose.material3.MaterialTheme
-@@ -1652,6 +1654,11 @@ internal fun MainAppContent(
+@@ -1722,6 +1724,11 @@ internal fun MainAppContent(
                          item = preview,
                          fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
                      )
@@ -23,7 +23,7 @@ index bb5afd1b8..289649a80 100644
                      val removesFromLibrary = isSaved &&
                          (posterActionTarget.libraryItem != null || !isRemoteLibrarySource)
                      NuvioPosterZoomActionOverlay(
-@@ -1667,11 +1674,16 @@ internal fun MainAppContent(
+@@ -1737,11 +1744,16 @@ internal fun MainAppContent(
                          anchor = selectedPosterAnchor,
                          actions = listOf(
                              PosterZoomOverlayAction(
@@ -47,7 +47,7 @@ index bb5afd1b8..289649a80 100644
                                  exitAnimation = if (removesFromLibrary && !isRemoteLibrarySource) {
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt
 new file mode 100644
-index 000000000..166e25015
+index 00000000..166e2501
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt
 @@ -0,0 +1,87 @@
@@ -139,7 +139,7 @@ index 000000000..166e25015
 +    }
 +}
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
-index 0f3f0889a..12a3bcc6b 100644
+index 854bc91a..8ead148d 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
 @@ -319,6 +319,14 @@ fun HomeScreen(
@@ -157,7 +157,7 @@ index 0f3f0889a..12a3bcc6b 100644
      LaunchedEffect(activeProfileId, continueWatchingListState) {
          snapshotFlow { continueWatchingListState.isScrollInProgress }.collect { isScrolling ->
              if (isScrolling) hasUserScrolledContinueWatching = true
-@@ -1153,6 +1161,21 @@ fun HomeScreen(
+@@ -1156,6 +1164,21 @@ fun HomeScreen(
                          disintegrationRequest = continueWatchingDisintegrationRequest,
                      )
  
@@ -180,7 +180,7 @@ index 0f3f0889a..12a3bcc6b 100644
                          val settingsItem = keyedSettingsItem.value
                          if (settingsItem.isCollection) {
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/notifications/EpisodeReleaseNotificationsRepository.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/notifications/EpisodeReleaseNotificationsRepository.kt
-index e33a5f540..ab616d57b 100644
+index e33a5f54..ab616d57 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/notifications/EpisodeReleaseNotificationsRepository.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/notifications/EpisodeReleaseNotificationsRepository.kt
 @@ -329,6 +329,26 @@ object EpisodeReleaseNotificationsRepository {
@@ -233,7 +233,7 @@ index e33a5f540..ab616d57b 100644
              runCatching {
                  EpisodeReleaseNotificationPlatform.scheduleEpisodeReleaseNotifications(requests)
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
-index fe0c628be..40e26a2b1 100644
+index fe0c628b..40e26a2b 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
 @@ -1191,6 +1191,18 @@ object TmdbMetadataService {

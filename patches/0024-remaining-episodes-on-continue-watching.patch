@@ -1,8 +1,8 @@
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeContinueWatchingSection.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeContinueWatchingSection.kt
-index 74854dd23..c4c73a5ab 100644
+index abb8ca38..b4bda62e 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeContinueWatchingSection.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeContinueWatchingSection.kt
-@@ -760,7 +760,7 @@ private fun ContinueWatchingCard(
+@@ -761,7 +761,7 @@ private fun ContinueWatchingCard(
                  contentScale = ContentScale.Crop,
              )
          }
@@ -11,7 +11,7 @@ index 74854dd23..c4c73a5ab 100644
          Column(
              modifier = Modifier
                  .align(Alignment.BottomStart)
-@@ -953,6 +953,7 @@ private fun ContinueWatchingWideCard(
+@@ -954,6 +954,7 @@ private fun ContinueWatchingWideCard(
                          overflow = TextOverflow.Ellipsis,
                      )
                      if (item.shufflePlayback) ShuffleBadge()
@@ -19,7 +19,7 @@ index 74854dd23..c4c73a5ab 100644
                      if (item.progressFraction <= 0f && item.seasonNumber != null && item.episodeNumber != null) {
                          val todayIsoDate = CurrentDateProvider.todayIsoDate()
                          val badgeText = when {
-@@ -1070,7 +1071,7 @@ private fun ContinueWatchingPosterCard(
+@@ -1071,7 +1072,7 @@ private fun ContinueWatchingPosterCard(
                      contentScale = if (item.isCloudLibraryItem()) ContentScale.Fit else ContentScale.Crop,
                  )
              }
@@ -30,7 +30,7 @@ index 74854dd23..c4c73a5ab 100644
                      modifier = Modifier
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/RemainingEpisodes.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/RemainingEpisodes.kt
 new file mode 100644
-index 000000000..26dcc1682
+index 00000000..26dcc168
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/RemainingEpisodes.kt
 @@ -0,0 +1,136 @@

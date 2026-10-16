@@ -1,5 +1,5 @@
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeCatalogSection.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeCatalogSection.kt
-index f4c907bbf..c55239a0d 100644
+index f4c907bb..c55239a0 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeCatalogSection.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeCatalogSection.kt
 @@ -4,8 +4,10 @@ import androidx.compose.foundation.layout.BoxWithConstraints
@@ -45,7 +45,7 @@ index f4c907bbf..c55239a0d 100644
  }
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/Top10Rank.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/Top10Rank.kt
 new file mode 100644
-index 000000000..038435445
+index 00000000..03843544
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/Top10Rank.kt
 @@ -0,0 +1,62 @@

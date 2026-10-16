@@ -1,5 +1,5 @@
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/MetaDetailsRepository.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/MetaDetailsRepository.kt
-index 6eeca1658..390fba337 100644
+index 6eeca165..390fba33 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/MetaDetailsRepository.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/MetaDetailsRepository.kt
 @@ -477,10 +477,14 @@ object MetaDetailsRepository {

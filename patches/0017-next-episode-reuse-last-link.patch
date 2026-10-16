@@ -1,8 +1,8 @@
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerNextEpisodeAutoPlay.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerNextEpisodeAutoPlay.kt
-index 4b2882b03..27c466127 100644
+index 0acd6683..d7c787be 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerNextEpisodeAutoPlay.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerNextEpisodeAutoPlay.kt
-@@ -102,11 +102,15 @@ internal fun CoroutineScope.launchPlayerNextEpisodeAutoPlay(
+@@ -104,11 +104,15 @@ internal fun CoroutineScope.launchPlayerNextEpisodeAutoPlay(
      onCountdownChanged(null)
  
      val type = contentType ?: parentMetaType

@@ -1,8 +1,8 @@
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
-index 4d4762159..ce05699df 100644
+index b3c7ecd6..1c3d06fe 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
-@@ -126,6 +126,8 @@ import com.nuvio.app.features.p2p.P2pSettingsRepository
+@@ -131,6 +131,8 @@ import com.nuvio.app.features.party.PartySync
  import com.nuvio.app.features.player.ExternalPlayerIntentResult
  import com.nuvio.app.features.player.externalPlaybackSession
  import com.nuvio.app.features.player.infusePlaybackCallbacks
@@ -11,7 +11,7 @@ index 4d4762159..ce05699df 100644
  import com.nuvio.app.features.player.recordExternalPlaybackProgress
  import com.nuvio.app.features.player.ExternalPlayerPlatform
  import com.nuvio.app.features.player.PlayerLaunch
-@@ -675,6 +677,7 @@ internal fun MainAppContent(
+@@ -682,6 +684,7 @@ internal fun MainAppContent(
              val fallbackSession = lastExternalPlayerLaunch?.externalPlaybackSession()
              coroutineScope.launch {
                  recordExternalPlaybackProgress(result, fallbackSession)
@@ -19,7 +19,7 @@ index 4d4762159..ce05699df 100644
                  result.callbackId?.let(infusePlaybackCallbacks::consume)
              }
          }
-@@ -2013,6 +2016,21 @@ internal fun MainAppContent(
+@@ -2083,6 +2086,21 @@ internal fun MainAppContent(
                      .zIndex(15f),
              )
  
@@ -43,7 +43,7 @@ index 4d4762159..ce05699df 100644
                      .align(Alignment.TopCenter)
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalMovieSuggestions.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalMovieSuggestions.kt
 new file mode 100644
-index 000000000..3adc5c121
+index 00000000..3adc5c12
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalMovieSuggestions.kt
 @@ -0,0 +1,108 @@
