@@ -1,0 +1,55 @@
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
+index 935be28d7..9d7995b7d 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
+@@ -100,6 +100,7 @@ import com.nuvio.app.features.cloud.playbackVideoId
+ import com.nuvio.app.features.cloud.providerPosterUrl
+ import com.nuvio.app.features.collection.CollectionRepository
+ import com.nuvio.app.features.collection.CollectionSyncService
++import com.nuvio.app.features.details.INFUSE_FORWARDS_ADDON_SUBTITLES
+ import com.nuvio.app.features.details.MetaDetailsRepository
+ import com.nuvio.app.features.details.MetaScreenSettingsRepository
+ import com.nuvio.app.features.downloads.DownloadItem
+@@ -793,7 +794,12 @@ internal fun MainAppContent(
+             }
+ 
+             val baseRequest = launch.toExternalPlayerPlaybackRequest()
++            // Fork: never hand addon subtitles to Infuse. They are timed for other releases
++            // and arrive out of sync; Infuse's own embedded tracks and subtitle search are in
++            // sync, and Infuse only keeps the last `sub=` anyway. Other players keep the toggle.
+             val shouldForwardSubtitles = playerSettingsUiState.externalPlayerForwardSubtitles &&
++                (INFUSE_FORWARDS_ADDON_SUBTITLES ||
++                    !playerSettingsUiState.externalPlayerId.equals("infuse", ignoreCase = true)) &&
+                 !playerSettingsUiState.preferredSubtitleLanguage.equals(SubtitleLanguageOption.NONE, ignoreCase = true)
+             val shouldSendSkipSegments = playerSettingsUiState.externalPlayerSendSkipSegments
+             if (shouldForwardSubtitles) {
+@@ -806,7 +812,7 @@ internal fun MainAppContent(
+                 type = launch.contentType ?: launch.parentMetaType,
+                 videoId = launch.videoId ?: launch.parentMetaId,
+                 contentId = launch.parentMetaId,
+-                forwardSubtitles = playerSettingsUiState.externalPlayerForwardSubtitles,
++                forwardSubtitles = shouldForwardSubtitles,
+                 sendSkipSegments = shouldSendSkipSegments,
+                 preferredLanguage = playerSettingsUiState.preferredSubtitleLanguage,
+                 secondaryLanguage = playerSettingsUiState.secondaryPreferredSubtitleLanguage,
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/DetailPreload.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/DetailPreload.kt
+index 2bb2de294..cfa7b21b3 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/DetailPreload.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/DetailPreload.kt
+@@ -82,6 +82,9 @@ object DetailPreload {
+         PlayerSettingsRepository.ensureLoaded()
+         val settings = PlayerSettingsRepository.uiState.value
+         if (!settings.externalPlayerEnabled || settings.externalPlayerId != "infuse") return
++        // Fork: subtitles are no longer forwarded to Infuse (see MainAppContent), so the
++        // subtitle prefetch below is kept but never runs for it.
++        if (INFUSE_FORWARDS_ADDON_SUBTITLES.not()) return
+         if (!settings.externalPlayerForwardSubtitles ||
+             settings.preferredSubtitleLanguage.equals(SubtitleLanguageOption.NONE, ignoreCase = true)
+         ) return
+@@ -115,3 +118,6 @@ object DetailPreload {
+         warmUpSubtitleSync(first)
+     }
+ }
++
++/** Fork: addon subtitles arrive out of sync in Infuse; it uses its own tracks instead. */
++internal const val INFUSE_FORWARDS_ADDON_SUBTITLES = false
