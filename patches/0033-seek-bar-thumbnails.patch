@@ -1,5 +1,5 @@
 diff --git a/composeApp/src/androidMain/kotlin/com/nuvio/app/MainActivity.kt b/composeApp/src/androidMain/kotlin/com/nuvio/app/MainActivity.kt
-index ab51f8bc6..e17bd0ecc 100644
+index ab51f8bc..e17bd0ec 100644
 --- a/composeApp/src/androidMain/kotlin/com/nuvio/app/MainActivity.kt
 +++ b/composeApp/src/androidMain/kotlin/com/nuvio/app/MainActivity.kt
 @@ -103,6 +103,7 @@ open class MainActivity : AppCompatActivity() {
@@ -11,7 +11,7 @@ index ab51f8bc6..e17bd0ecc 100644
          P2pSettingsStorage.initialize(applicationContext)
          P2pStreamingEngine.initialize(applicationContext)
 diff --git a/composeApp/src/androidMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.android.kt b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.android.kt
-index 9d2c52bc7..5c6205415 100644
+index 9d2c52bc..5c620541 100644
 --- a/composeApp/src/androidMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.android.kt
 +++ b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.android.kt
 @@ -31,6 +31,7 @@ actual object PlayerSettingsStorage {
@@ -48,7 +48,7 @@ index 9d2c52bc7..5c6205415 100644
              val key = ProfileScopedKey.of(movieRecommendationsEnabledKey)
 diff --git a/composeApp/src/androidMain/kotlin/com/nuvio/app/features/player/seekpreview/SeekPreviewFrameSource.android.kt b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/player/seekpreview/SeekPreviewFrameSource.android.kt
 new file mode 100644
-index 000000000..d059426d6
+index 00000000..d059426d
 --- /dev/null
 +++ b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/player/seekpreview/SeekPreviewFrameSource.android.kt
 @@ -0,0 +1,383 @@
@@ -436,7 +436,7 @@ index 000000000..d059426d6
 +    return result.get().getOrThrow()
 +}
 diff --git a/composeApp/src/commonMain/composeResources/values/strings.xml b/composeApp/src/commonMain/composeResources/values/strings.xml
-index 0b985c1f9..bbf428bbc 100644
+index 0b985c1f..bbf428bb 100644
 --- a/composeApp/src/commonMain/composeResources/values/strings.xml
 +++ b/composeApp/src/commonMain/composeResources/values/strings.xml
 @@ -1096,6 +1096,8 @@
@@ -449,7 +449,7 @@ index 0b985c1f9..bbf428bbc 100644
      <string name="settings_playback_touch_gestures_description">Allow swipes and double-taps on the player surface to seek, adjust brightness, or adjust volume.</string>
      <string name="settings_playback_swipe_to_seek">Swipe to Seek</string>
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerControls.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerControls.kt
-index 72c427581..13a4e79f4 100644
+index 72c42758..13a4e79f 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerControls.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerControls.kt
 @@ -5,6 +5,9 @@ import androidx.compose.animation.core.tween
@@ -649,7 +649,7 @@ index 72c427581..13a4e79f4 100644
                  Row(
                      modifier = Modifier
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeUi.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeUi.kt
-index 297adb6bf..8af91e1aa 100644
+index 297adb6b..15e87795 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeUi.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerScreenRuntimeUi.kt
 @@ -21,6 +21,7 @@ import androidx.compose.runtime.rememberUpdatedState
@@ -681,16 +681,8 @@ index 297adb6bf..8af91e1aa 100644
              title = title,
              streamTitle = activeStreamTitle,
              providerName = activeProviderName,
-@@ -446,6 +454,7 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long,
-             },
-             horizontalSafePadding = horizontalSafePadding,
-             modifier = Modifier.fillMaxSize(),
-+            seekPreview = seekPreview,
-         )
-     }
- }
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerSettingsRepository.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerSettingsRepository.kt
-index 09c42e632..526b634f0 100644
+index 09c42e63..526b634f 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerSettingsRepository.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerSettingsRepository.kt
 @@ -43,6 +43,7 @@ data class PlayerSettingsUiState(
@@ -749,7 +741,7 @@ index 09c42e632..526b634f0 100644
              autoShowSubtitlesOnRewindEnabled = autoShowSubtitlesOnRewindEnabled,
              autoShowSubtitlesOnMuteEnabled = autoShowSubtitlesOnMuteEnabled,
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.kt
-index 5f446510e..e126f4683 100644
+index 5f446510..e126f468 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.kt
 @@ -27,6 +27,8 @@ internal expect object PlayerSettingsStorage {
@@ -762,10 +754,19 @@ index 5f446510e..e126f4683 100644
      fun saveMovieRecommendationsEnabled(enabled: Boolean)
      fun loadAutoShowSubtitlesOnRewindEnabled(): Boolean?
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerTimeline.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerTimeline.kt
-index 9021309d5..1e360407a 100644
+index 9021309d..745206c6 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerTimeline.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/PlayerTimeline.kt
-@@ -112,11 +112,11 @@ internal fun PlayerTimeline(
+@@ -42,6 +42,8 @@ import com.nuvio.app.core.ui.nuvioTypeScale
+ import nuvio.composeapp.generated.resources.*
+ import org.jetbrains.compose.resources.stringResource
+ import com.nuvio.app.core.i18n.localizedEpisodeTitle
++import com.nuvio.app.features.player.seekpreview.SeekPreviewController
++import com.nuvio.app.features.player.seekpreview.SeekPreviewOverlay
+ 
+ internal val PlayerTimelineContentInset = 2.dp
+ 
+@@ -112,11 +114,11 @@ internal fun PlayerTimeline(
      onScrubFinished: (Long) -> Unit,
      modifier: Modifier = Modifier,
      enabled: Boolean = true,
@@ -779,7 +780,7 @@ index 9021309d5..1e360407a 100644
      val accentBrush = MaterialTheme.themePalette.accentBrush()
      val description = stringResource(Res.string.player_seek_position)
      var scrubPosition by remember { mutableStateOf<Long?>(null) }
-@@ -131,57 +131,66 @@ internal fun PlayerTimeline(
+@@ -131,57 +133,66 @@ internal fun PlayerTimeline(
      )
  
      CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
@@ -900,7 +901,7 @@ index 9021309d5..1e360407a 100644
  }
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/seekpreview/SeekPreviewController.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/seekpreview/SeekPreviewController.kt
 new file mode 100644
-index 000000000..caf8e7318
+index 00000000..c0a799e2
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/seekpreview/SeekPreviewController.kt
 @@ -0,0 +1,190 @@
@@ -914,7 +915,7 @@ index 000000000..caf8e7318
 +import androidx.compose.runtime.remember
 +import androidx.compose.runtime.setValue
 +import androidx.compose.ui.graphics.ImageBitmap
-+import com.nuvio.app.core.logging.InAppLogger
++import co.touchlab.kermit.Logger
 +import kotlinx.coroutines.CoroutineScope
 +import kotlinx.coroutines.Dispatchers
 +import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -941,7 +942,7 @@ index 000000000..caf8e7318
 +
 +private const val MaxInitialFailures = 3
 +
-+private const val LogTag = "Player/SeekPreview"
++private val log = Logger.withTag("Player/SeekPreview")
 +
 +internal class SeekPreviewFrame(val positionMs: Long, val bitmap: ImageBitmap)
 +
@@ -1009,7 +1010,7 @@ index 000000000..caf8e7318
 +                onFailure(bucket, elapsedMs, null)
 +                return@collect
 +            }
-+            InAppLogger.debug(LogTag, "frame at ${bucket}ms ${bitmap.width}x${bitmap.height} in ${elapsedMs}ms")
++            log.d { "frame at ${bucket}ms ${bitmap.width}x${bitmap.height} in ${elapsedMs}ms" }
 +            hasSucceeded = true
 +            consecutiveFailures = 0
 +            cache[bucket] = bitmap
@@ -1032,11 +1033,11 @@ index 000000000..caf8e7318
 +        if (!sourceOpened) {
 +            sourceOpened = true
 +            source = openSeekPreviewFrameSource(url, headers)
-+            InAppLogger.info(
-+                LogTag,
++            // Fork: log the host only, never the full stream URL (it can carry tokens).
++            log.i {
 +                "source=${source?.let { it::class.simpleName } ?: "none"} headers=${headers.size} " +
-+                    "url=${InAppLogger.redactUrl(url)}",
-+            )
++                    "host=${url.substringAfter("://").substringBefore('/').substringAfter('@')}"
++            }
 +        }
 +        val activeSource = source ?: throw UnsupportedSeekPreviewSource
 +        return activeSource.frameAt(positionMs, FrameMaxWidthPx)
@@ -1045,11 +1046,11 @@ index 000000000..caf8e7318
 +    private fun onFailure(positionMs: Long, elapsedMs: Long, error: Throwable?) {
 +        consecutiveFailures++
 +        val reason = error?.let { "${it::class.simpleName}: ${it.message}" } ?: "no frame"
-+        InAppLogger.warn(LogTag, "frame at ${positionMs}ms failed after ${elapsedMs}ms: $reason")
++        log.w { "frame at ${positionMs}ms failed after ${elapsedMs}ms: $reason" }
 +        if (error === UnsupportedSeekPreviewSource) {
 +            isUnavailable = true
 +        } else if (!hasSucceeded && consecutiveFailures >= MaxInitialFailures) {
-+            InAppLogger.warn(LogTag, "disabled for this stream after $consecutiveFailures failures")
++            log.w { "disabled for this stream after $consecutiveFailures failures" }
 +            isUnavailable = true
 +        }
 +        if (isUnavailable) {
@@ -1096,7 +1097,7 @@ index 000000000..caf8e7318
 +}
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/seekpreview/SeekPreviewFrameSource.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/seekpreview/SeekPreviewFrameSource.kt
 new file mode 100644
-index 000000000..9c8e3d6e7
+index 00000000..9c8e3d6e
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/seekpreview/SeekPreviewFrameSource.kt
 @@ -0,0 +1,16 @@
@@ -1118,7 +1119,7 @@ index 000000000..9c8e3d6e7
 +): SeekPreviewFrameSource?
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/seekpreview/SeekPreviewOverlay.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/seekpreview/SeekPreviewOverlay.kt
 new file mode 100644
-index 000000000..eb299ba75
+index 00000000..eb299ba7
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/seekpreview/SeekPreviewOverlay.kt
 @@ -0,0 +1,142 @@
@@ -1265,7 +1266,7 @@ index 000000000..eb299ba75
 +    }
 +}
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/PlaybackSettingsPage.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/PlaybackSettingsPage.kt
-index 837225149..3eb8469e1 100644
+index 83722514..3eb8469e 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/PlaybackSettingsPage.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/PlaybackSettingsPage.kt
 @@ -485,6 +485,15 @@ private fun PlaybackSettingsSection(
@@ -1285,7 +1286,7 @@ index 837225149..3eb8469e1 100644
                      title = stringResource(Res.string.settings_playback_touch_gestures),
                      description = stringResource(Res.string.settings_playback_touch_gestures_description),
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/SettingsSearch.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/SettingsSearch.kt
-index dac52922c..7437ef3da 100644
+index dac52922..7437ef3d 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/SettingsSearch.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/SettingsSearch.kt
 @@ -591,6 +591,11 @@ internal fun settingsSearchEntries(
@@ -1301,7 +1302,7 @@ index dac52922c..7437ef3da 100644
                  "touch-gestures",
                  stringResource(Res.string.settings_playback_touch_gestures),
 diff --git a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.ios.kt b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.ios.kt
-index 3e312d16b..f35d0511e 100644
+index 3e312d16..6efaae30 100644
 --- a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.ios.kt
 +++ b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/player/PlayerSettingsStorage.ios.kt
 @@ -29,6 +29,7 @@ actual object PlayerSettingsStorage {
@@ -1312,9 +1313,22 @@ index 3e312d16b..f35d0511e 100644
      private const val movieRecommendationsEnabledKey = "movie_recommendations_enabled"
      private const val autoShowSubtitlesOnRewindEnabledKey = "auto_show_subtitles_on_rewind_enabled"
      private const val autoShowSubtitlesOnMuteEnabledKey = "auto_show_subtitles_on_mute_enabled"
+@@ -338,6 +339,12 @@ actual object PlayerSettingsStorage {
+         saveBoolean(swipeToSeekEnabledKey, enabled)
+     }
+ 
++    actual fun loadSeekPreviewEnabled(): Boolean? = loadBoolean(seekPreviewEnabledKey)
++
++    actual fun saveSeekPreviewEnabled(enabled: Boolean) {
++        saveBoolean(seekPreviewEnabledKey, enabled)
++    }
++
+ 
+ 
+     actual fun loadMovieRecommendationsEnabled(): Boolean? = loadBoolean(movieRecommendationsEnabledKey)
 diff --git a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/player/seekpreview/SeekPreviewFrameSource.ios.kt b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/player/seekpreview/SeekPreviewFrameSource.ios.kt
 new file mode 100644
-index 000000000..0500f26e7
+index 00000000..0500f26e
 --- /dev/null
 +++ b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/player/seekpreview/SeekPreviewFrameSource.ios.kt
 @@ -0,0 +1,66 @@
@@ -1386,7 +1400,7 @@ index 000000000..0500f26e7
 +}
 diff --git a/iosApp/iosApp/Player/FFmpegSeekPreviewGenerator.swift b/iosApp/iosApp/Player/FFmpegSeekPreviewGenerator.swift
 new file mode 100644
-index 000000000..d390a950a
+index 00000000..d390a950
 --- /dev/null
 +++ b/iosApp/iosApp/Player/FFmpegSeekPreviewGenerator.swift
 @@ -0,0 +1,372 @@
@@ -1763,7 +1777,7 @@ index 000000000..d390a950a
 +    }
 +}
 diff --git a/iosApp/iosApp/Player/MPVPlayerBridge.swift b/iosApp/iosApp/Player/MPVPlayerBridge.swift
-index c6041fc94..3cac59661 100644
+index c6041fc9..3cac5966 100644
 --- a/iosApp/iosApp/Player/MPVPlayerBridge.swift
 +++ b/iosApp/iosApp/Player/MPVPlayerBridge.swift
 @@ -1392,5 +1392,6 @@ final class MPVPlayerBridgeCreator: NSObject, NuvioPlayerBridgeCreator {
