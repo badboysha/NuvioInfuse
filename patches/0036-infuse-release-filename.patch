@@ -1,0 +1,93 @@
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/AppNavigationSupport.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/AppNavigationSupport.kt
+index 4ac5abf39..6288f24d0 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/AppNavigationSupport.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/AppNavigationSupport.kt
+@@ -111,6 +111,7 @@ internal fun PlayerLaunch.toExternalPlayerPlaybackRequest(): ExternalPlayerPlayb
+         season = seasonNumber,
+         episode = episodeNumber,
+         episodeTitle = episodeTitle,
++        sourceFilename = sourceFilename ?: torrentFilename,
+     )
+ }
+ 
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalPlayerPlatform.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalPlayerPlatform.kt
+index 1129a5888..ecaf5017e 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalPlayerPlatform.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalPlayerPlatform.kt
+@@ -27,6 +27,8 @@ data class ExternalPlayerPlaybackRequest(
+     val skipSegmentsJson: String? = null,
+     val durationMs: Long? = null,
+     val playbackSession: WatchProgressPlaybackSession? = null,
++    /** Fork: the release's real file name (addon behaviorHints.filename), when known. */
++    val sourceFilename: String? = null,
+ ) {
+     /**
+      * Builds a display title for external players.
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/InfusePlayback.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/InfusePlayback.kt
+index 9435176e9..a4d5bc8ba 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/InfusePlayback.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/InfusePlayback.kt
+@@ -127,7 +127,7 @@ internal fun buildInfusePlaybackUrl(request: ExternalPlayerPlaybackRequest, sess
+     append(request.sourceUrl.encodeURLParameter())
+     append("&position=${request.resumePositionMs.coerceAtLeast(0L) / 1000L}")
+     append("&filename=")
+-    append(request.buildPlayerTitle(includeEpisodeTitle = true).encodeURLParameter())
++    append(request.infuseFilename().encodeURLParameter())
+     infuseSubtitles(request.subtitles).forEach { subtitle ->
+         append("&sub=")
+         append(subtitle.url.encodeURLParameter())
+@@ -148,3 +148,23 @@ internal fun infuseSubtitles(subtitles: List<SubtitleInput>?): List<SubtitleInpu
+         .groupBy { it.lang.lowercase() }
+         .values
+         .flatMap { it.take(INFUSE_MAX_SUBTITLES_PER_LANGUAGE) }
++
++/**
++ * Fork: the name Infuse shows and matches on. A real release file name
++ * (e.g. "Inception.2010.2160p.BluRay.REMUX-FGT.mkv") lets Infuse's subtitle search find subtitles
++ * timed for that exact release. Falls back to the friendly title when the name is missing, looks
++ * like junk, or (for episodes) does not carry this episode's SxxEyy tag, so a season pack's
++ * wrong file name never mislabels the episode.
++ */
++internal fun ExternalPlayerPlaybackRequest.infuseFilename(): String {
++    val fallback = buildPlayerTitle(includeEpisodeTitle = true)
++    val raw = sourceFilename?.substringAfterLast('/')?.substringAfterLast('\\')?.trim().orEmpty()
++    if (raw.length < 8 || '.' !in raw) return fallback
++    val season = season
++    val episode = episode
++    if (season != null && episode != null) {
++        val tag = Regex("(?i)S0*$season[ ._-]?E0*$episode(\\D|$)")
++        if (!tag.containsMatchIn(raw)) return fallback
++    }
++    return raw
++}
+diff --git a/composeApp/src/commonTest/kotlin/com/nuvio/app/features/player/InfusePlaybackTest.kt b/composeApp/src/commonTest/kotlin/com/nuvio/app/features/player/InfusePlaybackTest.kt
+index 56bded815..6ea25eda8 100644
+--- a/composeApp/src/commonTest/kotlin/com/nuvio/app/features/player/InfusePlaybackTest.kt
++++ b/composeApp/src/commonTest/kotlin/com/nuvio/app/features/player/InfusePlaybackTest.kt
+@@ -171,4 +171,26 @@ class InfusePlaybackTest {
+ 
+     private fun success(launch: Url, seconds: String, source: String = request.sourceUrl): String =
+         "${launch.parameters["x-success"]}?lastPlayedUrl=${source.encodeURLParameter()}&position=${seconds.encodeURLParameter()}"
++
++    @Test
++    fun infuseGetsTheReleaseFileNameWhenItMatchesTheEpisode() {
++        val named = request.copy(sourceFilename = "Series.and.Friends.S02E05.1080p.WEB-DL.DDP5.1-GRP.mkv")
++        assertEquals("Series.and.Friends.S02E05.1080p.WEB-DL.DDP5.1-GRP.mkv", named.infuseFilename())
++    }
++
++    @Test
++    fun infuseKeepsTheFriendlyTitleForAMismatchedOrJunkFileName() {
++        val fallback = request.buildPlayerTitle(includeEpisodeTitle = true)
++        assertEquals(fallback, request.copy(sourceFilename = "Series.S02E15.1080p.mkv").infuseFilename())
++        assertEquals(fallback, request.copy(sourceFilename = "Series.S01E05.1080p.mkv").infuseFilename())
++        assertEquals(fallback, request.copy(sourceFilename = "video").infuseFilename())
++        assertEquals(fallback, request.copy(sourceFilename = null).infuseFilename())
++    }
++
++    @Test
++    fun infuseGetsAMovieReleaseFileName() {
++        val movie = request.copy(season = null, episode = null, episodeTitle = null,
++            sourceFilename = "folder/Inception.2010.2160p.BluRay.REMUX.HEVC-FGT.mkv")
++        assertEquals("Inception.2010.2160p.BluRay.REMUX.HEVC-FGT.mkv", movie.infuseFilename())
++    }
+ }
