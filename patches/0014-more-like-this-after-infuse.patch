@@ -43,10 +43,10 @@ index 34d4abfb8..c329d3181 100644
                      .align(Alignment.TopCenter)
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalMovieSuggestions.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalMovieSuggestions.kt
 new file mode 100644
-index 000000000..3adc5c121
+index 000000000..98d1bae8a
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalMovieSuggestions.kt
-@@ -0,0 +1,108 @@
+@@ -0,0 +1,116 @@
 +package com.nuvio.app.features.player
 +
 +import androidx.compose.foundation.layout.WindowInsets
@@ -144,7 +144,15 @@ index 000000000..3adc5c121
 +
 +    MovieRecommendationCard(
 +        recommendations = visibleSuggestions,
-+        visible = current != null && visibleSuggestions.isNotEmpty(),
++        // Fork: back from Infuse at the end of a movie counts as "ended": the card stays up
++        // until dismissed (Enhanced's card takes a stage instead of a visible flag).
++        stage = if (current != null && visibleSuggestions.isNotEmpty()) {
++            PlayerNextEpisodeRules.MOVIE_RECOMMENDATION_STAGE_ENDED
++        } else {
++            0
++        },
++        dismissed = false,
++        controlsVisible = false,
 +        onOpen = { preview ->
 +            ExternalMovieSuggestions.dismiss()
 +            onOpen(preview)
