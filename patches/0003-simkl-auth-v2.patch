@@ -1,5 +1,5 @@
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklApiMetadata.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklApiMetadata.kt
-index 99d1be26..df24d9b1 100644
+index 99d1be261..df24d9b15 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklApiMetadata.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklApiMetadata.kt
 @@ -4,7 +4,10 @@ import com.nuvio.app.core.build.AppVersionConfig
@@ -15,7 +15,7 @@ index 99d1be26..df24d9b1 100644
  internal val simklAppVersion: String
      get() = AppVersionConfig.VERSION_NAME.ifBlank { "dev" }
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklAuthModels.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklAuthModels.kt
-index 4d1dab0f..0113ee56 100644
+index 61fa044ba..a3d0e57fe 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklAuthModels.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklAuthModels.kt
 @@ -36,6 +36,7 @@ internal data class SimklStoredAuthState(
@@ -25,9 +25,9 @@ index 4d1dab0f..0113ee56 100644
 +    val refreshToken: String? = null,
      val pendingAuthorizationState: String? = null,
      val pendingAuthorizationStartedAtEpochMs: Long? = null,
- ) {
+     val authenticationMethod: String? = null,
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklAuthParsing.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklAuthParsing.kt
-index 9d2e46bc..1bf683f2 100644
+index 9d2e46bc6..1bf683f27 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklAuthParsing.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklAuthParsing.kt
 @@ -52,6 +52,8 @@ internal fun buildSimklAuthorizationUrl(
@@ -40,10 +40,10 @@ index 9d2e46bc..1bf683f2 100644
      append(material.challenge.encodeURLParameter())
      append("&code_challenge_method=S256")
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklAuthRepository.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklAuthRepository.kt
-index d4081682..67f82081 100644
+index 48aea16b2..74ad2f50e 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklAuthRepository.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/simkl/SimklAuthRepository.kt
-@@ -174,7 +174,13 @@ object SimklAuthRepository : TrackingAuthProvider {
+@@ -316,7 +316,13 @@ object SimklAuthRepository : TrackingAuthProvider {
          ensureLoaded()
          val token = accessToken?.takeIf(String::isNotBlank) ?: return null
          val expiresAt = storedState.tokenExpiresAtEpochMs
@@ -58,7 +58,7 @@ index d4081682..67f82081 100644
              invalidateCredentials(SimklAuthError.AUTHORIZATION_EXPIRED)
              return null
          }
-@@ -236,7 +242,7 @@ object SimklAuthRepository : TrackingAuthProvider {
+@@ -378,7 +384,7 @@ object SimklAuthRepository : TrackingAuthProvider {
                  SimklApi.client.execute(
                      SimklApiRequest(
                          method = SimklHttpMethod.POST,
@@ -67,24 +67,37 @@ index d4081682..67f82081 100644
                          body = json.encodeToString(request),
                          requiresAuthentication = false,
                          retryPolicy = SimklRetryPolicy.NEVER,
-@@ -268,6 +274,7 @@ object SimklAuthRepository : TrackingAuthProvider {
-                 tokenExpiresAtEpochMs = token.expiresIn
-                     ?.takeIf { seconds -> seconds > 0L }
-                     ?.let { seconds -> SimklPlatformClock.nowEpochMs() + seconds * 1_000L },
-+                refreshToken = token.refreshToken?.takeIf(String::isNotBlank),
-             )
-             persistMetadata()
-             publish(isLoading = false, error = null)
-@@ -317,7 +324,7 @@ object SimklAuthRepository : TrackingAuthProvider {
+@@ -403,10 +409,10 @@ object SimklAuthRepository : TrackingAuthProvider {
+                 return@withLock
              }
+ 
+-            applyAccessToken(token.accessToken, token.expiresIn)
++            applyAccessToken(token.accessToken, token.expiresIn, token.refreshToken)
+         }
+ 
+-    private suspend fun applyAccessToken(token: String, expiresInSeconds: Long?) {
++    private suspend fun applyAccessToken(token: String, expiresInSeconds: Long?, refreshToken: String? = null) {
+         accessToken = token
+         SimklAuthStorage.saveAccessToken(token)
+         clearPendingAuthorization()
+@@ -414,6 +420,7 @@ object SimklAuthRepository : TrackingAuthProvider {
+             tokenExpiresAtEpochMs = expiresInSeconds
+                 ?.takeIf { seconds -> seconds > 0L }
+                 ?.let { seconds -> SimklPlatformClock.nowEpochMs() + seconds * 1_000L },
++            refreshToken = refreshToken?.takeIf(String::isNotBlank),
+         )
+         persistMetadata()
+         publish(isLoading = false, error = null)
+@@ -464,7 +471,7 @@ object SimklAuthRepository : TrackingAuthProvider {
              ?: SimklStoredAuthState()
+         authenticationMethod = SimklAuthenticationMethod.fromStorageValue(storedState.authenticationMethod)
          accessToken = SimklAuthStorage.loadAccessToken()?.takeIf(String::isNotBlank)
 -        if (accessToken != null && storedState.tokenExpiresAtEpochMs?.let { expiresAt ->
 +        if (accessToken != null && !hasRefreshToken() && storedState.tokenExpiresAtEpochMs?.let { expiresAt ->
                  SimklPlatformClock.nowEpochMs() >= expiresAt - TOKEN_EXPIRY_SKEW_MS
              } == true
          ) {
-@@ -337,6 +344,67 @@ object SimklAuthRepository : TrackingAuthProvider {
+@@ -484,6 +491,67 @@ object SimklAuthRepository : TrackingAuthProvider {
          publish(error = null)
      }
  
@@ -152,7 +165,7 @@ index d4081682..67f82081 100644
      private fun invalidateCredentials(error: SimklAuthError) {
          accessToken = null
          SimklAuthStorage.saveAccessToken(null)
-@@ -391,6 +459,7 @@ object SimklAuthRepository : TrackingAuthProvider {
+@@ -538,6 +606,7 @@ object SimklAuthRepository : TrackingAuthProvider {
          )
  
      private const val TOKEN_EXPIRY_SKEW_MS = 60_000L
@@ -160,7 +173,7 @@ index d4081682..67f82081 100644
  }
  
  @Serializable
-@@ -408,6 +477,14 @@ private data class SimklTokenResponse(
+@@ -555,6 +624,14 @@ private data class SimklTokenResponse(
      @SerialName("token_type") val tokenType: String? = null,
      val scope: String? = null,
      @SerialName("expires_in") val expiresIn: Long? = null,

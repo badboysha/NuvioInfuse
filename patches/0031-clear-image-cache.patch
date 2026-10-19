@@ -1,8 +1,8 @@
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/AdvancedSettingsPage.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/AdvancedSettingsPage.kt
-index 6418963d..8cddc3f2 100644
+index 3b7989bb8..b415651df 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/AdvancedSettingsPage.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/AdvancedSettingsPage.kt
-@@ -137,6 +137,24 @@ internal fun LazyListScope.advancedSettingsContent(
+@@ -166,6 +166,24 @@ internal fun LazyListScope.advancedSettingsContent(
                          }
                      },
                  )

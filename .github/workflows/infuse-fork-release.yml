@@ -1,9 +1,10 @@
 name: Infuse Fork Release
 
-# Builds an unsigned iOS IPA of each official NuvioMedia/NuvioMobile release with the patches in
-# /patches applied, and publishes it as a GitHub release (picked up by the Raspberry Pi release
-# watcher). Checks every 6 hours, so a new official release is rebuilt within about 6 hours of it
-# appearing. A change to /patches or this file also triggers a rebuild.
+# Builds an unsigned iOS IPA of NuvioMobile-Enhanced (luqmanfadlli/NuvioMobile-Enhanced, branch
+# `enhanced`, which carries official Nuvio plus its own features) with the patches in /patches
+# applied, and publishes it as a GitHub release (picked up by the Raspberry Pi release watcher).
+# Checks every 6 hours and rebuilds when the Enhanced branch has moved. A change to /patches or
+# this file also triggers a rebuild.
 
 on:
   workflow_dispatch:
@@ -28,7 +29,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  SOURCE_REPO: NuvioMedia/NuvioMobile
+  SOURCE_REPO: luqmanfadlli/NuvioMobile-Enhanced
+  SOURCE_BRANCH: enhanced
 
 jobs:
   prepare:
@@ -63,9 +65,10 @@ jobs:
       - name: Decide whether to build
         id: decide
         run: |
-          upstream_tag="$(gh api "repos/${SOURCE_REPO}/releases?per_page=10" --jq '[.[] | select(.draft | not)][0].tag_name')"
-          [[ -n "${upstream_tag}" ]] || { echo "::error::No published release found on ${SOURCE_REPO}."; exit 1; }
-          source_sha="$(gh api "repos/${SOURCE_REPO}/commits/${upstream_tag}" --jq .sha)"
+          # Enhanced publishes no releases: build the tip of its branch.
+          source_sha="$(gh api "repos/${SOURCE_REPO}/commits/${SOURCE_BRANCH}" --jq .sha)"
+          [[ -n "${source_sha}" ]] || { echo "::error::Could not read ${SOURCE_REPO}@${SOURCE_BRANCH}."; exit 1; }
+          upstream_tag="${SOURCE_BRANCH}@${source_sha::7}"
           version="$(gh api "repos/${SOURCE_REPO}/contents/iosApp/Configuration/Version.xcconfig?ref=${source_sha}" --jq .content \
             | base64 -d | sed -nE 's/^[[:space:]]*MARKETING_VERSION[[:space:]]*=[[:space:]]*([^[:space:]#]+).*$/\1/p' | head -n 1)"
           # Fingerprint of what this fork adds, so a patch or build change rebuilds but an
@@ -76,7 +79,7 @@ jobs:
           echo "source_sha=${source_sha}" >> "$GITHUB_OUTPUT"
           echo "version=${version}" >> "$GITHUB_OUTPUT"
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
-          echo "Latest upstream release: ${upstream_tag} (${source_sha::7}), version ${version}"
+          echo "Source: ${SOURCE_REPO} ${upstream_tag}, version ${version}"
           if gh release view "${tag}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1 \
              && [[ "${{ inputs.force }}" != "true" ]]; then
             echo "Release ${tag} already exists; nothing to do."
@@ -108,7 +111,7 @@ jobs:
         with:
           path: fork
 
-      - name: Check out upstream release
+      - name: Check out Enhanced source
         uses: actions/checkout@v6
         with:
           repository: ${{ env.SOURCE_REPO }}
@@ -252,7 +255,8 @@ jobs:
       - name: Publish release
         if: github.ref_name == 'cmp-rewrite'
         run: |
-          src_ipa="src/build/ios-ipa/nuvio-${VERSION}-full-release.ipa"
+          # Enhanced names the IPA nuvio-<version>-enhanced-<configuration>.ipa.
+          src_ipa="$(ls src/build/ios-ipa/*.ipa 2>/dev/null | head -n 1)"
           dst="nuvio-${VERSION}-infuse-ios.ipa"
           if [[ ! -f "${src_ipa}" ]]; then
             echo "::error::Expected ${src_ipa} was not produced."
@@ -260,11 +264,11 @@ jobs:
             exit 1
           fi
           mv "${src_ipa}" "${dst}"
-          notes="Official NuvioMedia/NuvioMobile ${{ needs.prepare.outputs.upstream_tag }} (${{ needs.prepare.outputs.source_sha }}) with fork patches:"
+          notes="NuvioMobile-Enhanced ${{ needs.prepare.outputs.upstream_tag }} (${{ needs.prepare.outputs.source_sha }}) with fork patches:"
           for patch in fork/patches/*.patch; do notes+=$'\n'"- $(basename "${patch}")"; done
           gh release create "${TAG}" "${dst}" \
             --repo "${GITHUB_REPOSITORY}" \
             --target "${{ github.ref_name }}" \
-            --title "Nuvio ${VERSION} (Infuse fork)" \
+            --title "Nuvio Enhanced ${VERSION} (Infuse fork)" \
             --notes "${notes}" \
             || gh release upload "${TAG}" "${dst}" --clobber --repo "${GITHUB_REPOSITORY}"

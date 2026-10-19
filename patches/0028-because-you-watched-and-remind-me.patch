@@ -1,5 +1,5 @@
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
-index 8d3a2a1c..935be28d 100644
+index dee45d4f9..f7b3de582 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
 @@ -17,6 +17,8 @@ import androidx.compose.material.icons.filled.CheckCircle
@@ -11,7 +11,7 @@ index 8d3a2a1c..935be28d 100644
  import androidx.compose.material.icons.filled.PlayArrow
  import androidx.compose.material.icons.filled.Replay
  import androidx.compose.material3.MaterialTheme
-@@ -1722,6 +1724,11 @@ internal fun MainAppContent(
+@@ -2055,6 +2057,11 @@ internal fun MainAppContent(
                          item = preview,
                          fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
                      )
@@ -23,7 +23,7 @@ index 8d3a2a1c..935be28d 100644
                      val removesFromLibrary = isSaved &&
                          (posterActionTarget.libraryItem != null || !isRemoteLibrarySource)
                      NuvioPosterZoomActionOverlay(
-@@ -1737,11 +1744,16 @@ internal fun MainAppContent(
+@@ -2070,11 +2077,16 @@ internal fun MainAppContent(
                          anchor = selectedPosterAnchor,
                          actions = listOf(
                              PosterZoomOverlayAction(
@@ -47,7 +47,7 @@ index 8d3a2a1c..935be28d 100644
                                  exitAnimation = if (removesFromLibrary && !isRemoteLibrarySource) {
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt
 new file mode 100644
-index 00000000..166e2501
+index 000000000..166e25015
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt
 @@ -0,0 +1,87 @@
@@ -139,10 +139,10 @@ index 00000000..166e2501
 +    }
 +}
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
-index 854bc91a..8ead148d 100644
+index a1e288065..a7f7cb50a 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
-@@ -319,6 +319,14 @@ fun HomeScreen(
+@@ -328,6 +328,14 @@ fun HomeScreen(
      var hasUserScrolledContinueWatching by remember(activeProfileId) { mutableStateOf(false) }
      var hasUserScrolledUpcoming by remember(activeProfileId) { mutableStateOf(false) }
  
@@ -157,33 +157,33 @@ index 854bc91a..8ead148d 100644
      LaunchedEffect(activeProfileId, continueWatchingListState) {
          snapshotFlow { continueWatchingListState.isScrollInProgress }.collect { isScrolling ->
              if (isScrolling) hasUserScrolledContinueWatching = true
-@@ -1156,6 +1164,21 @@ fun HomeScreen(
+@@ -1181,6 +1189,21 @@ fun HomeScreen(
                          disintegrationRequest = continueWatchingDisintegrationRequest,
-                     )
+                         )
  
-+                    forkRows.forEach { section ->
-+                        item(key = section.key, contentType = "catalog") {
-+                            HomeCatalogRowSection(
-+                                section = section,
-+                                entries = section.items.take(HOME_CATALOG_PREVIEW_LIMIT),
-+                                modifier = Modifier.padding(bottom = 12.dp),
-+                                sectionPadding = homeSectionPadding,
-+                                watchedKeys = watchedUiState.watchedKeys,
-+                                fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
-+                                onPosterClick = onPosterClick,
-+                                onPosterLongClick = onPosterLongClick,
-+                            )
++                        forkRows.forEach { section ->
++                            item(key = section.key, contentType = "catalog") {
++                                HomeCatalogRowSection(
++                                    section = section,
++                                    entries = section.items.take(HOME_CATALOG_PREVIEW_LIMIT),
++                                    modifier = Modifier.padding(bottom = 12.dp),
++                                    sectionPadding = homeSectionPadding,
++                                    watchedKeys = watchedUiState.watchedKeys,
++                                    fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
++                                    onPosterClick = onPosterClick,
++                                    onPosterLongClick = onPosterLongClick,
++                                )
++                            }
 +                        }
-+                    }
 +
-                     keyedEnabledHomeItems.forEach { keyedSettingsItem ->
-                         val settingsItem = keyedSettingsItem.value
-                         if (settingsItem.isCollection) {
+                         keyedEnabledHomeItems.forEach { keyedSettingsItem ->
+                             val settingsItem = keyedSettingsItem.value
+                             if (settingsItem.isCollection) {
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/notifications/EpisodeReleaseNotificationsRepository.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/notifications/EpisodeReleaseNotificationsRepository.kt
-index e33a5f54..ab616d57 100644
+index ce9a9f8ac..c6f2bbf18 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/notifications/EpisodeReleaseNotificationsRepository.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/notifications/EpisodeReleaseNotificationsRepository.kt
-@@ -329,6 +329,26 @@ object EpisodeReleaseNotificationsRepository {
+@@ -344,6 +344,26 @@ object EpisodeReleaseNotificationsRepository {
          return changed
      }
  
@@ -210,7 +210,7 @@ index e33a5f54..ab616d57 100644
      private fun inferFollowedOnIsoDate(item: LibraryItem): String {
          if (item.savedAtEpochMs >= MinReasonableSavedAtEpochMs) {
              return EpisodeReleaseNotificationsClock.isoDateFromEpochMs(item.savedAtEpochMs)
-@@ -377,7 +397,11 @@ object EpisodeReleaseNotificationsRepository {
+@@ -392,7 +412,11 @@ object EpisodeReleaseNotificationsRepository {
                  errorMessage = null,
              )
  
@@ -223,21 +223,22 @@ index e33a5f54..ab616d57 100644
                  runCatching { EpisodeReleaseNotificationPlatform.clearScheduledEpisodeReleaseNotifications() }
                  _uiState.value = _uiState.value.copy(
                      isLoading = false,
-@@ -400,7 +424,7 @@ object EpisodeReleaseNotificationsRepository {
-                         buildRequestsForShow(trackedShow)
-                     }
-                 }
--            }.awaitAll().flatten()
-+            }.awaitAll().flatten() + movieReminders
+@@ -424,8 +448,7 @@ object EpisodeReleaseNotificationsRepository {
+             cachedRequestsByShowKey = requestsByShowKey
+             persist()
  
-             runCatching {
-                 EpisodeReleaseNotificationPlatform.scheduleEpisodeReleaseNotifications(requests)
+-            val requests = requestsByShowKey.values
+-                .flatten()
++            val requests = (requestsByShowKey.values.flatten() + movieReminders)
+                 .distinctBy(EpisodeReleaseNotificationRequest::requestId)
+                 .sortedBy(EpisodeReleaseNotificationRequest::releaseDateIso)
+ 
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
-index fe0c628b..40e26a2b 100644
+index e62331337..10238f1b6 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
-@@ -1191,6 +1191,18 @@ object TmdbMetadataService {
-         }.getOrNull()
+@@ -1229,6 +1229,18 @@ object TmdbMetadataService {
+         )
      }
  
 +    /**
@@ -249,7 +250,7 @@ index fe0c628b..40e26a2b 100644
 +        val tmdbId = runCatching { TmdbService.ensureTmdbId(id, mediaType) }.getOrNull()
 +            ?.toIntOrNull() ?: return emptyList()
 +        val language = normalizeTmdbLanguage(TmdbSettingsRepository.snapshot().language)
-+        return fetchMoreLikeThis(tmdbId = tmdbId, mediaType = mediaType, language = language)
++        return fetchMoreLikeThis(tmdbId = tmdbId, mediaType = mediaType, language = language).items
 +    }
 +
      private suspend fun fetchMoreLikeThis(

@@ -1,8 +1,8 @@
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
-index 1c3d06fe..40edc472 100644
+index c329d3181..21ef801db 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
-@@ -808,6 +808,10 @@ internal fun MainAppContent(
+@@ -939,6 +939,10 @@ internal fun MainAppContent(
                  onOverlayMessage = { message -> StreamsRepository.setOverlayVisible(true, message) },
              )
              StreamsRepository.setOverlayVisible(false)
@@ -14,7 +14,7 @@ index 1c3d06fe..40edc472 100644
                  val intentResult = ExternalPlayerPlatform.buildIntent(
                      request = enrichedRequest,
 diff --git a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/player/SubtitleCacheProvider.ios.kt b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/player/SubtitleCacheProvider.ios.kt
-index dc2e47a6..0b509cc2 100644
+index dc2e47a63..0b509cc23 100644
 --- a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/player/SubtitleCacheProvider.ios.kt
 +++ b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/player/SubtitleCacheProvider.ios.kt
 @@ -1,12 +1,28 @@

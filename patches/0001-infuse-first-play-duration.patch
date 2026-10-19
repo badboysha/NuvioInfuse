@@ -1,5 +1,5 @@
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/AppNavigationSupport.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/AppNavigationSupport.kt
-index 78fb6c3c..32397531 100644
+index ba2ee16e1..cd486bd98 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/AppNavigationSupport.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/AppNavigationSupport.kt
 @@ -7,6 +7,8 @@ import com.nuvio.app.features.collection.CollectionEditorPage
@@ -11,7 +11,7 @@ index 78fb6c3c..32397531 100644
  import com.nuvio.app.features.home.MetaPreview
  import com.nuvio.app.features.library.LibraryItem
  import com.nuvio.app.features.player.ExternalPlayerPlaybackRequest
-@@ -86,21 +88,49 @@ internal data class PosterActionTarget(
+@@ -88,21 +90,49 @@ internal data class PosterActionTarget(
      val libraryListKey: String? = null,
  )
  

@@ -1,5 +1,5 @@
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/InfusePlayback.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/InfusePlayback.kt
-index 49555442..9435176e 100644
+index 49555442f..9435176e9 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/InfusePlayback.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/InfusePlayback.kt
 @@ -128,7 +128,7 @@ internal fun buildInfusePlaybackUrl(request: ExternalPlayerPlaybackRequest, sess
@@ -27,10 +27,10 @@ index 49555442..9435176e 100644
 +        .values
 +        .flatMap { it.take(INFUSE_MAX_SUBTITLES_PER_LANGUAGE) }
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/PlaybackSettingsPage.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/PlaybackSettingsPage.kt
-index 02cbafdf..83722514 100644
+index 0f18d7759..75de0c221 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/PlaybackSettingsPage.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/PlaybackSettingsPage.kt
-@@ -463,7 +463,8 @@ private fun PlaybackSettingsSection(
+@@ -481,7 +481,8 @@ private fun PlaybackSettingsSection(
                          onClick = { showExternalPlayerAppDialog = true },
                      )
                  }
@@ -40,7 +40,7 @@ index 02cbafdf..83722514 100644
                      SettingsGroupDivider(isTablet = isTablet)
                      SettingsSwitchRow(
                          title = stringResource(Res.string.settings_playback_external_player_forward_subtitles),
-@@ -472,6 +473,8 @@ private fun PlaybackSettingsSection(
+@@ -490,6 +491,8 @@ private fun PlaybackSettingsSection(
                          isTablet = isTablet,
                          onCheckedChange = PlayerSettingsRepository::setExternalPlayerForwardSubtitles,
                      )
@@ -50,7 +50,7 @@ index 02cbafdf..83722514 100644
                      SettingsSwitchRow(
                          title = stringResource(Res.string.settings_playback_external_player_send_skip_segments),
 diff --git a/composeApp/src/commonTest/kotlin/com/nuvio/app/features/player/InfusePlaybackTest.kt b/composeApp/src/commonTest/kotlin/com/nuvio/app/features/player/InfusePlaybackTest.kt
-index af9b1804..56bded81 100644
+index af9b18042..56bded815 100644
 --- a/composeApp/src/commonTest/kotlin/com/nuvio/app/features/player/InfusePlaybackTest.kt
 +++ b/composeApp/src/commonTest/kotlin/com/nuvio/app/features/player/InfusePlaybackTest.kt
 @@ -41,6 +41,17 @@ class InfusePlaybackTest {

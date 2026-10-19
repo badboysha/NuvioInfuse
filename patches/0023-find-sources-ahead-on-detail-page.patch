@@ -1,6 +1,6 @@
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/DetailPreload.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/DetailPreload.kt
 new file mode 100644
-index 00000000..46669104
+index 000000000..46669104b
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/DetailPreload.kt
 @@ -0,0 +1,117 @@
@@ -122,18 +122,18 @@ index 00000000..46669104
 +    }
 +}
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/MetaDetailsScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/MetaDetailsScreen.kt
-index 2ab71324..e9d4bdda 100644
+index 598639ced..45a52b701 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/MetaDetailsScreen.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/MetaDetailsScreen.kt
-@@ -54,6 +54,7 @@ import com.nuvio.app.core.ui.NuvioLoadingIndicator
+@@ -53,6 +53,7 @@ import com.nuvio.app.core.ui.NuvioLoadingIndicator
  import androidx.compose.material3.MaterialTheme
  import androidx.compose.material3.Text
  import androidx.compose.runtime.Composable
 +import androidx.compose.runtime.DisposableEffect
+ import androidx.compose.runtime.CompositionLocalProvider
  import androidx.compose.runtime.LaunchedEffect
  import androidx.compose.runtime.State
- import androidx.compose.runtime.derivedStateOf
-@@ -888,6 +889,28 @@ fun MetaDetailsScreen(
+@@ -868,6 +869,29 @@ fun MetaDetailsScreen(
                          }
                      }
                  }
@@ -159,6 +159,7 @@ index 2ab71324..e9d4bdda 100644
 +                    DetailPreload.schedule(preloadTarget)
 +                    onDispose { DetailPreload.cancelPending() }
 +                }
-                 val manualPlayHandler = onPlayManually
-                 val showManualPlayOption = manualPlayHandler != null && StreamAutoPlayPolicy.isEffectivelyEnabled(playerSettingsUiState)
-                 val onPrimaryPlayLongClick: (() -> Unit)? = manualPlayHandler
++
+                 fun runPlayAction(
+                     handler: ((type: String, videoId: String, parentMetaId: String, parentMetaType: String, title: String, logo: String?, poster: String?, background: String?, seasonNumber: Int?, episodeNumber: Int?, episodeTitle: String?, episodeThumbnail: String?, pauseDescription: String?, resumePositionMs: Long?) -> Unit)?,
+                     resumePositionMs: Long?,

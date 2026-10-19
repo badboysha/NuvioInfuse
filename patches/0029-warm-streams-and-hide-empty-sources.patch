@@ -1,5 +1,5 @@
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalPlayerLaunchCoordinator.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalPlayerLaunchCoordinator.kt
-index 37c9974a..382d1ca4 100644
+index 37c9974a6..382d1ca4d 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalPlayerLaunchCoordinator.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalPlayerLaunchCoordinator.kt
 @@ -47,7 +47,7 @@ suspend fun prepareExternalPlayerLaunch(
@@ -13,7 +13,7 @@ index 37c9974a..382d1ca4 100644
      }
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/StreamWarmup.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/StreamWarmup.kt
 new file mode 100644
-index 00000000..7c07b278
+index 000000000..7c07b278d
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/StreamWarmup.kt
 @@ -0,0 +1,47 @@
@@ -65,12 +65,12 @@ index 00000000..7c07b278
 +    }
 +}
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamsScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamsScreen.kt
-index c920162b..afa1b5c8 100644
+index 2ff269430..46a24f378 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamsScreen.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamsScreen.kt
-@@ -773,6 +773,18 @@ internal fun StreamList(
-         StreamBadgeSettingsRepository.uiState
-     }.collectAsStateWithLifecycle()
+@@ -814,6 +814,18 @@ internal fun StreamList(
+         splitPinnedSources(filteredGroups, pinnedSourceIds)
+     }
  
 +    // Fork: warm the first link of the top two sources so Play hands Infuse a ready link.
 +    val warmTargets = filteredGroups
@@ -87,7 +87,7 @@ index c920162b..afa1b5c8 100644
      CompositionLocalProvider(LocalStreamSizeLabelFormat provides formatStreamSize) {
      LazyColumn(
          modifier = modifier.fillMaxWidth(),
-@@ -866,7 +878,8 @@ private fun LazyListScope.streamSection(
+@@ -930,7 +942,8 @@ private fun LazyListScope.streamSection(
      resumePositionMs: Long?,
      resumeProgressFraction: Float?,
  ) {

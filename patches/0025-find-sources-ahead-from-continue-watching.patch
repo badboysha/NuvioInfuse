@@ -1,5 +1,5 @@
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/DetailPreload.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/DetailPreload.kt
-index 46669104..2bb2de29 100644
+index 46669104b..2bb2de294 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/DetailPreload.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/DetailPreload.kt
 @@ -50,12 +50,12 @@ object DetailPreload {
@@ -18,7 +18,7 @@ index 46669104..2bb2de29 100644
              recent[target.key] = TimeSource.Monotonic.markNow()
              run(target)
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeContinueWatchingSection.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeContinueWatchingSection.kt
-index b4bda62e..d24cb422 100644
+index b4bda62e5..d24cb4223 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeContinueWatchingSection.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeContinueWatchingSection.kt
 @@ -27,6 +27,8 @@ import androidx.compose.material3.MaterialTheme

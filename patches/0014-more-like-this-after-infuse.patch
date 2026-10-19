@@ -1,8 +1,8 @@
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
-index b3c7ecd6..1c3d06fe 100644
+index 34d4abfb8..c329d3181 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
-@@ -131,6 +131,8 @@ import com.nuvio.app.features.party.PartySync
+@@ -140,6 +140,8 @@ import com.nuvio.app.features.party.partyMediaKey
  import com.nuvio.app.features.player.ExternalPlayerIntentResult
  import com.nuvio.app.features.player.externalPlaybackSession
  import com.nuvio.app.features.player.infusePlaybackCallbacks
@@ -11,7 +11,7 @@ index b3c7ecd6..1c3d06fe 100644
  import com.nuvio.app.features.player.recordExternalPlaybackProgress
  import com.nuvio.app.features.player.ExternalPlayerPlatform
  import com.nuvio.app.features.player.PlayerLaunch
-@@ -682,6 +684,7 @@ internal fun MainAppContent(
+@@ -805,6 +807,7 @@ internal fun MainAppContent(
              val fallbackSession = lastExternalPlayerLaunch?.externalPlaybackSession()
              coroutineScope.launch {
                  recordExternalPlaybackProgress(result, fallbackSession)
@@ -19,7 +19,7 @@ index b3c7ecd6..1c3d06fe 100644
                  result.callbackId?.let(infusePlaybackCallbacks::consume)
              }
          }
-@@ -2083,6 +2086,21 @@ internal fun MainAppContent(
+@@ -2416,6 +2419,21 @@ internal fun MainAppContent(
                      .zIndex(15f),
              )
  
@@ -43,7 +43,7 @@ index b3c7ecd6..1c3d06fe 100644
                      .align(Alignment.TopCenter)
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalMovieSuggestions.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalMovieSuggestions.kt
 new file mode 100644
-index 00000000..3adc5c12
+index 000000000..3adc5c121
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalMovieSuggestions.kt
 @@ -0,0 +1,108 @@

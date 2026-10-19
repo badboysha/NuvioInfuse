@@ -1,5 +1,5 @@
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeContinueWatchingSection.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeContinueWatchingSection.kt
-index abb8ca38..b4bda62e 100644
+index abb8ca386..b4bda62e5 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeContinueWatchingSection.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeContinueWatchingSection.kt
 @@ -761,7 +761,7 @@ private fun ContinueWatchingCard(
@@ -30,7 +30,7 @@ index abb8ca38..b4bda62e 100644
                      modifier = Modifier
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/RemainingEpisodes.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/RemainingEpisodes.kt
 new file mode 100644
-index 00000000..26dcc168
+index 000000000..26dcc1682
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/RemainingEpisodes.kt
 @@ -0,0 +1,136 @@

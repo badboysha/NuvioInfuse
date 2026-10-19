@@ -1,6 +1,6 @@
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/watching/application/PosterImdbAliases.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/watching/application/PosterImdbAliases.kt
 new file mode 100644
-index 00000000..46794121
+index 000000000..467941219
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/watching/application/PosterImdbAliases.kt
 @@ -0,0 +1,49 @@
@@ -54,7 +54,7 @@ index 00000000..46794121
 +    }
 +}
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/watching/application/WatchingState.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/watching/application/WatchingState.kt
-index 8ddf1ada..848609e5 100644
+index 8ddf1adaa..848609e5e 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/watching/application/WatchingState.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/watching/application/WatchingState.kt
 @@ -22,7 +22,13 @@ object WatchingState {
