@@ -1,0 +1,23 @@
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeCollectionRowSection.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeCollectionRowSection.kt
+index e8916fa16..7ebf950fe 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeCollectionRowSection.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeCollectionRowSection.kt
+@@ -147,6 +147,18 @@ private fun CollectionFolderCard(
+             ) {
+                 when {
+                     !imageUrl.isNullOrBlank() -> {
++                        // Fork: an animated folder tile (e.g. Streaming Services logos) waits for
++                        // the whole GIF to download and decode, so the card sat black for a long
++                        // time. Draw the small still cover underneath; the GIF covers it once ready.
++                        val stillCover = firstNonBlank(folder.coverImageUrl)
++                        if (stillCover != null && stillCover != imageUrl) {
++                            NuvioAsyncImage(
++                                imageUrl = stillCover,
++                                contentDescription = folder.title,
++                                modifier = Modifier.fillMaxSize(),
++                                contentScale = ContentScale.Crop,
++                            )
++                        }
+                         NuvioAsyncImage(
+                             imageUrl = imageUrl,
+                             contentDescription = folder.title,
