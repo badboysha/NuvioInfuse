@@ -93,11 +93,13 @@ jobs:
     name: Build unsigned iOS IPA
     needs: prepare
     if: needs.prepare.outputs.build == 'true'
-    runs-on: macos-26
+    runs-on: xcode-27
+
     # Enhanced is a much bigger app than official Nuvio; its own release build allows 180 min.
     timeout-minutes: 180
     env:
-      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_27.app/Contents/Developer
+
       GRADLE_OPTS: -Dfile.encoding=UTF-8
       IOS_CONFIGURATION: Release
       # Same memory split as Enhanced's own iOS release build.
