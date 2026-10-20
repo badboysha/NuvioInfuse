@@ -93,7 +93,7 @@ jobs:
     name: Build unsigned iOS IPA
     needs: prepare
     if: needs.prepare.outputs.build == 'true'
-    runs-on: macos-26
+    runs-on: macos-15
     # Enhanced is a much bigger app than official Nuvio; its own release build allows 180 min.
     timeout-minutes: 180
     env:
