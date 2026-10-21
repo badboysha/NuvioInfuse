@@ -43,10 +43,23 @@ index e8916fa..5a7fc2b 100644
                      !folder.coverEmoji.isNullOrBlank() -> {
                          Text(
 diff --git a/composeApp/src/iosMain/kotlin/com/nuvio/app/core/ui/NuvioAsyncImage.ios.kt b/composeApp/src/iosMain/kotlin/com/nuvio/app/core/ui/NuvioAsyncImage.ios.kt
-index cbd444b..7defe0c 100644
+index cbd444b..0df6da0 100644
 --- a/composeApp/src/iosMain/kotlin/com/nuvio/app/core/ui/NuvioAsyncImage.ios.kt
 +++ b/composeApp/src/iosMain/kotlin/com/nuvio/app/core/ui/NuvioAsyncImage.ios.kt
-@@ -36,12 +36,10 @@ internal actual fun NuvioAsyncImage(
+@@ -26,22 +26,23 @@ internal actual fun NuvioAsyncImage(
+     }
+ 
+     BoxWithConstraints(modifier = modifier) {
++        val maxEdge = 320
+         val targetWidth = constraints.maxWidth
+             .takeIf { it in 1..MaxAnimationTargetEdgePx }
++            ?.coerceAtMost(maxEdge)
+             ?: DefaultAnimationTargetEdgePx
+         val targetHeight = constraints.maxHeight
+             .takeIf { it in 1..MaxAnimationTargetEdgePx }
++            ?.coerceAtMost(maxEdge)
+             ?: DefaultAnimationTargetEdgePx
+ 
          val state = rememberAnimatedFrame(imageUrl, targetWidth, targetHeight)
  
          when {
@@ -57,31 +70,9 @@ index cbd444b..7defe0c 100644
 -                contentScale = contentScale,
 -            )
 +            // Do not fall back to static AsyncImage on a failed/over-budget animated GIF,
-+            // because Coil decodes Frame 0 (which is solid black on fade-in GIFs) and
++            // because Coil decodes Frame 0 (which is solid black on fade-in logos) and
 +            // paints it over the still cover rendered underneath.
 +            state.unavailable -> Unit
  
              state.bitmap != null -> Image(
                  bitmap = state.bitmap,
-diff --git a/composeApp/src/iosMain/kotlin/com/nuvio/app/core/ui/SkiaAnimatedImage.ios.kt b/composeApp/src/iosMain/kotlin/com/nuvio/app/core/ui/SkiaAnimatedImage.ios.kt
-index fcaa03e..dfe5121 100644
---- a/composeApp/src/iosMain/kotlin/com/nuvio/app/core/ui/SkiaAnimatedImage.ios.kt
-+++ b/composeApp/src/iosMain/kotlin/com/nuvio/app/core/ui/SkiaAnimatedImage.ios.kt
-@@ -64,13 +64,13 @@ private const val MaxCachedSourceBytes = 24L * 1024 * 1024
- private const val MaxConcurrentLoads = 6
- private const val IdleRetentionMillis = 2_000L
- 
--private const val MaxAnimationBudgetBytes = 120L * 1024 * 1024
-+private const val MaxAnimationBudgetBytes = 192L * 1024 * 1024
- 
--private const val MaxPerAnimationBytes = 20L * 1024 * 1024
-+private const val MaxPerAnimationBytes = 64L * 1024 * 1024
- 
- private const val SizeBucketPx = 64
- 
--internal const val MaxAnimationTargetEdgePx = 1024
-+internal const val MaxAnimationTargetEdgePx = 480
- internal const val DefaultAnimationTargetEdgePx = 256
- 
--private const val MinAnimationEdgePx = 96
-+private const val MinAnimationEdgePx = 64
