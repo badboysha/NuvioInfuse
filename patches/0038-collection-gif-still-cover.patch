@@ -1,15 +1,27 @@
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeCollectionRowSection.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeCollectionRowSection.kt
-index e8916fa16..7ebf950fe 100644
+index e8916fa..5a7fc2b 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeCollectionRowSection.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeCollectionRowSection.kt
-@@ -147,6 +147,18 @@ private fun CollectionFolderCard(
+@@ -147,15 +147,30 @@ private fun CollectionFolderCard(
              ) {
                  when {
                      !imageUrl.isNullOrBlank() -> {
-+                        // Fork: an animated folder tile (e.g. Streaming Services logos) waits for
-+                        // the whole GIF to download and decode, so the card sat black for a long
-+                        // time. Draw the small still cover underneath; the GIF covers it once ready.
+-                        NuvioAsyncImage(
+-                            imageUrl = imageUrl,
+-                            contentDescription = folder.title,
+-                            modifier = Modifier.fillMaxSize(),
+-                            contentScale = ContentScale.Crop,
+-                            animateIfPossible = animateGifs &&
+-                                isAnimatedCollectionFolderImage(folder, imageUrl) &&
+-                                LocalScreenActive.current,
+-                        )
++                        // Fork: draw the static cover underneath animated folder tiles and
++                        // only overlay the GIF when animation is active so a static Frame 0
++                        // (often pure black on fade-in logos) never covers the still cover.
 +                        val stillCover = firstNonBlank(folder.coverImageUrl)
++                        val shouldAnimate = animateGifs &&
++                            isAnimatedCollectionFolderImage(folder, imageUrl) &&
++                            LocalScreenActive.current
 +                        if (stillCover != null && stillCover != imageUrl) {
 +                            NuvioAsyncImage(
 +                                imageUrl = stillCover,
@@ -18,6 +30,58 @@ index e8916fa16..7ebf950fe 100644
 +                                contentScale = ContentScale.Crop,
 +                            )
 +                        }
-                         NuvioAsyncImage(
-                             imageUrl = imageUrl,
-                             contentDescription = folder.title,
++                        if (stillCover == null || stillCover == imageUrl || shouldAnimate) {
++                            NuvioAsyncImage(
++                                imageUrl = imageUrl,
++                                contentDescription = folder.title,
++                                modifier = Modifier.fillMaxSize(),
++                                contentScale = ContentScale.Crop,
++                                animateIfPossible = shouldAnimate,
++                            )
++                        }
+                     }
+                     !folder.coverEmoji.isNullOrBlank() -> {
+                         Text(
+diff --git a/composeApp/src/iosMain/kotlin/com/nuvio/app/core/ui/NuvioAsyncImage.ios.kt b/composeApp/src/iosMain/kotlin/com/nuvio/app/core/ui/NuvioAsyncImage.ios.kt
+index cbd444b..7defe0c 100644
+--- a/composeApp/src/iosMain/kotlin/com/nuvio/app/core/ui/NuvioAsyncImage.ios.kt
++++ b/composeApp/src/iosMain/kotlin/com/nuvio/app/core/ui/NuvioAsyncImage.ios.kt
+@@ -36,12 +36,10 @@ internal actual fun NuvioAsyncImage(
+         val state = rememberAnimatedFrame(imageUrl, targetWidth, targetHeight)
+ 
+         when {
+-            state.unavailable -> AsyncImage(
+-                model = imageUrl,
+-                contentDescription = contentDescription,
+-                modifier = Modifier.matchParentSize(),
+-                contentScale = contentScale,
+-            )
++            // Do not fall back to static AsyncImage on a failed/over-budget animated GIF,
++            // because Coil decodes Frame 0 (which is solid black on fade-in GIFs) and
++            // paints it over the still cover rendered underneath.
++            state.unavailable -> Unit
+ 
+             state.bitmap != null -> Image(
+                 bitmap = state.bitmap,
+diff --git a/composeApp/src/iosMain/kotlin/com/nuvio/app/core/ui/SkiaAnimatedImage.ios.kt b/composeApp/src/iosMain/kotlin/com/nuvio/app/core/ui/SkiaAnimatedImage.ios.kt
+index fcaa03e..dfe5121 100644
+--- a/composeApp/src/iosMain/kotlin/com/nuvio/app/core/ui/SkiaAnimatedImage.ios.kt
++++ b/composeApp/src/iosMain/kotlin/com/nuvio/app/core/ui/SkiaAnimatedImage.ios.kt
+@@ -64,13 +64,13 @@ private const val MaxCachedSourceBytes = 24L * 1024 * 1024
+ private const val MaxConcurrentLoads = 6
+ private const val IdleRetentionMillis = 2_000L
+ 
+-private const val MaxAnimationBudgetBytes = 120L * 1024 * 1024
++private const val MaxAnimationBudgetBytes = 192L * 1024 * 1024
+ 
+-private const val MaxPerAnimationBytes = 20L * 1024 * 1024
++private const val MaxPerAnimationBytes = 64L * 1024 * 1024
+ 
+ private const val SizeBucketPx = 64
+ 
+-internal const val MaxAnimationTargetEdgePx = 1024
++internal const val MaxAnimationTargetEdgePx = 480
+ internal const val DefaultAnimationTargetEdgePx = 256
+ 
+-private const val MinAnimationEdgePx = 96
++private const val MinAnimationEdgePx = 64
