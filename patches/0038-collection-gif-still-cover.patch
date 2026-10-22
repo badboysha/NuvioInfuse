@@ -1,7 +1,114 @@
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeCollectionRowSection.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeCollectionRowSection.kt
 index e8916fa..5a7fc2b 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeCollectionRowSection.kt
++++ b/composeApp/src/commonMain/kotlin/codiff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeCollectionRowSection.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeCollectionRowSection.kt
+index e8916fa..5a7fc2b 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeCollectionRowSection.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeCollectionRowSection.kt
+@@ -147,15 +147,30 @@ private fun CollectionFolderCard(
+             ) {
+                 when {
+                     !imageUrl.isNullOrBlank() -> {
+-                        NuvioAsyncImage(
+-                            imageUrl = imageUrl,
+-                            contentDescription = folder.title,
+-                            modifier = Modifier.fillMaxSize(),
+-                            contentScale = ContentScale.Crop,
+-                            animateIfPossible = animateGifs &&
+-                                isAnimatedCollectionFolderImage(folder, imageUrl) &&
+-                                LocalScreenActive.current,
+-                        )
++                        // Fork: draw the static cover underneath animated folder tiles and
++                        // only overlay the GIF when animation is active so a static Frame 0
++                        // (often pure black on fade-in logos) never covers the still cover.
++                        val stillCover = firstNonBlank(folder.coverImageUrl)
++                        val shouldAnimate = animateGifs &&
++                            isAnimatedCollectionFolderImage(folder, imageUrl) &&
++                            LocalScreenActive.current
++                        if (stillCover != null && stillCover != imageUrl) {
++                            NuvioAsyncImage(
++                                imageUrl = stillCover,
++                                contentDescription = folder.title,
++                                modifier = Modifier.fillMaxSize(),
++                                contentScale = ContentScale.Crop,
++                            )
++                        }
++                        if (stillCover == null || stillCover == imageUrl || shouldAnimate) {
++                            NuvioAsyncImage(
++                                imageUrl = imageUrl,
++                                contentDescription = folder.title,
++                                modifier = Modifier.fillMaxSize(),
++                                contentScale = ContentScale.Crop,
++                                animateIfPossible = shouldAnimate,
++                            )
++                        }
+                     }
+                     !folder.coverEmoji.isNullOrBlank() -> {
+                         Text(
+diff --git a/composeApp/src/iosMain/kotlin/com/nuvio/app/core/ui/NuvioAsyncImage.ios.kt b/composeApp/src/iosMain/kotlin/com/nuvio/app/core/ui/NuvioAsyncImage.ios.kt
+index 4a28dd1..576414c 100644
+--- a/composeApp/src/iosMain/kotlin/com/nuvio/app/core/ui/NuvioAsyncImage.ios.kt
++++ b/composeApp/src/iosMain/kotlin/com/nuvio/app/core/ui/NuvioAsyncImage.ios.kt
+@@ -26,22 +26,27 @@ internal actual fun NuvioAsyncImage(
+     }
+ 
+     BoxWithConstraints(modifier = modifier) {
++        val maxEdge = 320
+         val targetWidth = constraints.maxWidth
+             .takeIf { it in 1..MaxAnimationTargetEdgePx }
++            ?.coerceAtMost(maxEdge)
+             ?: DefaultAnimationTargetEdgePx
+         val targetHeight = constraints.maxHeight
+             .takeIf { it in 1..MaxAnimationTargetEdgePx }
++            ?.coerceAtMost(maxEdge)
+             ?: DefaultAnimationTargetEdgePx
+ 
+-        val state = rememberAnimatedFrame(imageUrl, targetWidth, targetHeight)
++        val state = rememberAnimatedFrame(imageUrl.normalizedAnimatedUrl(), targetWidth, targetHeight)
+ 
+         when {
+-            state.unavailable -> AsyncImage(
+-                model = imageUrl,
+-                contentDescription = contentDescription,
+-                modifier = Modifier.matchParentSize(),
+-                contentScale = contentScale,
+-            )
++            state.unavailable -> if (!imageUrl.isGifLike()) {
++                AsyncImage(
++                    model = imageUrl,
++                    contentDescription = contentDescription,
++                    modifier = Modifier.matchParentSize(),
++                    contentScale = contentScale,
++                )
++            }
+ 
+             state.bitmap != null -> Image(
+                 bitmap = state.bitmap,
+@@ -53,8 +58,22 @@ internal actual fun NuvioAsyncImage(
+     }
+ }
+ 
+-private fun String.looksAnimated(): Boolean {
++private fun String.normalizedAnimatedUrl(): String {
++    val clean = substringBefore('?').substringBefore('#')
++    if (clean.endsWith(".gifv", ignoreCase = true)) {
++        return clean.dropLast(1) + substring(clean.length)
++    }
++    return this
++}
++
++private fun String.isGifLike(): Boolean {
+     val cleanUrl = substringBefore('?').substringBefore('#')
+     return cleanUrl.endsWith(".gif", ignoreCase = true) ||
++        cleanUrl.endsWith(".gifv", ignoreCase = true)
++}
++
++private fun String.looksAnimated(): Boolean {
++    val cleanUrl = substringBefore('?').substringBefore('#')
++    return isGifLike() ||
+         cleanUrl.endsWith(".webp", ignoreCase = true)
+ }
+m/nuvio/app/features/home/components/HomeCollectionRowSection.kt
 @@ -147,15 +147,30 @@ private fun CollectionFolderCard(
              ) {
                  when {
