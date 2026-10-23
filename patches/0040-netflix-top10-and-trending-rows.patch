@@ -148,7 +148,7 @@ index ef7c1c12..dbbeb32f 100644
 +                        val forkTrendingRows = forkTrending
 +                        val forkRowsInOrder = listOfNotNull(forkTrendingRows?.topShows) +
 +                            forkRows +
-+                            listOfNotNull(forkTrendingRows?.topMovies, forkTrendingRows?.trendingNow)
++                            listOfNotNull(forkTrendingRows?.topMovies) // Fork: no Trending Now row (Trending / New covers it)
 +                        forkRowsInOrder.forEach { section ->
                              item(key = section.key, contentType = "catalog") {
                                  HomeCatalogRowSection(
