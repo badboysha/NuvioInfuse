@@ -1,0 +1,336 @@
+diff --git a/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt
+index c26d1ebe..c92fa8fb 100644
+--- a/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt
++++ b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt
+@@ -7,6 +7,7 @@ internal actual object ForkHomeSettingsStorage {
+     private const val preferencesName = "nuvio_fork_home_settings"
+     private const val becauseKey = "fork_because_rows"
+     private const val trendingKey = "fork_trending_rows"
++    private const val whitePlayKey = "fork_white_play_button"
+ 
+     private var preferences: SharedPreferences? = null
+ 
+@@ -27,4 +28,11 @@ internal actual object ForkHomeSettingsStorage {
+     actual fun saveTrendingRowsEnabled(enabled: Boolean) {
+         preferences?.edit()?.putBoolean(trendingKey, enabled)?.apply()
+     }
++
++    actual fun loadWhitePlayButton(): Boolean? =
++        preferences?.takeIf { it.contains(whitePlayKey) }?.getBoolean(whitePlayKey, false)
++
++    actual fun saveWhitePlayButton(enabled: Boolean) {
++        preferences?.edit()?.putBoolean(whitePlayKey, enabled)?.apply()
++    }
+ }
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/DetailActionButtons.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/DetailActionButtons.kt
+index 43f9610b..0dfcdf5e 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/DetailActionButtons.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/DetailActionButtons.kt
+@@ -724,6 +724,8 @@ private fun PlayButton(
+     onPlayLongClick: (() -> Unit)?,
+     modifier: Modifier = Modifier,
+ ) {
++        // Fork: Netflix-style white Play button when switched on.
++        val forkWhite = forkWhitePlayButton()
+         Surface(
+             modifier = modifier
+                 .height(buttonHeight)
+@@ -731,14 +733,22 @@ private fun PlayButton(
+                     if (playEnabled) {
+                         Modifier
+                             .clip(playShape)
+-                            .background(MaterialTheme.themePalette.accentBrush())
++                            .then(
++                                if (forkWhite) {
++                                    Modifier.background(Color.White)
++                                } else {
++                                    Modifier.background(MaterialTheme.themePalette.accentBrush())
++                                },
++                            )
+                     } else {
+                         Modifier
+                     },
+                 ),
+             shape = playShape,
+             color = if (playEnabled) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant,
+-            contentColor = if (playEnabled) {
++            contentColor = if (playEnabled && forkWhite) {
++                Color.Black
++            } else if (playEnabled) {
+                 MaterialTheme.nuvio.colors.onAccent
+             } else {
+                 MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/DetailHero.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/DetailHero.kt
+index a1126cca..c52ce58c 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/DetailHero.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/DetailHero.kt
+@@ -253,6 +253,9 @@ fun DetailHero(
+                         )
+                     }
+ 
++                    // Fork: Netflix "TOP 10 · #3 in TV Shows Today" when the title is in a Top 10 row.
++                    ForkTop10Badge(meta = meta, modifier = Modifier.padding(top = 10.dp))
++
+                     if (meta.genres.isNotEmpty()) {
+                         Spacer(modifier = Modifier.height(8.dp))
+                         Text(
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/ForkNetflixDetails.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/ForkNetflixDetails.kt
+new file mode 100644
+index 00000000..6d70081f
+--- /dev/null
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/ForkNetflixDetails.kt
+@@ -0,0 +1,77 @@
++package com.nuvio.app.features.details.components
++
++import androidx.compose.foundation.background
++import androidx.compose.foundation.layout.Arrangement
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.Column
++import androidx.compose.foundation.layout.Row
++import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.layout.size
++import androidx.compose.foundation.shape.RoundedCornerShape
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.Text
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.remember
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.text.font.FontWeight
++import androidx.compose.ui.unit.dp
++import androidx.compose.ui.unit.sp
++import androidx.lifecycle.compose.collectAsStateWithLifecycle
++import com.nuvio.app.features.details.MetaDetails
++import com.nuvio.app.features.home.ForkHomeRows
++import com.nuvio.app.features.home.ForkHomeSettings
++
++/** Fork: Netflix red, used for the Top 10 badge. */
++private val ForkNetflixRed = Color(0xFFE50914)
++
++/**
++ * Fork: Netflix-style "TOP 10 · #3 in TV Shows Today" line under the title on the details page,
++ * when the title is in one of the Top 10 rows Home last loaded. Nothing otherwise.
++ */
++@Composable
++internal fun ForkTop10Badge(meta: MetaDetails, modifier: Modifier = Modifier) {
++    val trendingEnabled by remember {
++        ForkHomeSettings.ensureLoaded()
++        ForkHomeSettings.trendingRowsEnabled
++    }.collectAsStateWithLifecycle()
++    if (!trendingEnabled) return
++    val rank = remember(meta.id, meta.name, meta.type, meta.releaseInfo) {
++        ForkHomeRows.top10Rank(meta.id, meta.name, meta.type, meta.releaseInfo)
++    } ?: return
++    Row(
++        modifier = modifier,
++        verticalAlignment = Alignment.CenterVertically,
++        horizontalArrangement = Arrangement.spacedBy(8.dp),
++    ) {
++        Box(
++            modifier = Modifier
++                .size(24.dp)
++                .background(ForkNetflixRed, RoundedCornerShape(3.dp)),
++            contentAlignment = Alignment.Center,
++        ) {
++            Column(horizontalAlignment = Alignment.CenterHorizontally) {
++                Text("TOP", color = Color.White, fontSize = 6.sp, lineHeight = 6.sp, fontWeight = FontWeight.Bold)
++                Text("10", color = Color.White, fontSize = 11.sp, lineHeight = 11.sp, fontWeight = FontWeight.Black)
++            }
++        }
++        Text(
++            text = "#${rank.first} in ${rank.second} Today",
++            style = MaterialTheme.typography.titleSmall,
++            fontWeight = FontWeight.Bold,
++            color = Color.White,
++        )
++    }
++}
++
++/** Fork: whether the details Play button is Netflix white (Settings → Meta screen). */
++@Composable
++internal fun forkWhitePlayButton(): Boolean {
++    val white by remember {
++        ForkHomeSettings.ensureLoaded()
++        ForkHomeSettings.whitePlayButton
++    }.collectAsStateWithLifecycle()
++    return white
++}
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt
+index 0f02d5cb..7e3b4dfb 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt
+@@ -91,6 +91,26 @@ object ForkHomeRows {
+         }
+     }
+ 
++    /**
++     * Fork: "#3 in TV Shows Today" for the details page — this title's place in the Top 10 rows
++     * Home last loaded (no network here). Matches TMDB ids directly, else name + year.
++     */
++    fun top10Rank(id: String, name: String, type: String, year: String?): Pair<Int, String>? {
++        val rows = trendingRows ?: return null
++        val isSeries = type.equals("series", true) || type.equals("tv", true)
++        val row = (if (isSeries) rows.topShows else rows.topMovies) ?: return null
++        val wantedName = name.trim().lowercase()
++        val wantedYear = year?.take(4)?.takeIf { it.length == 4 }
++        val index = row.items.indexOfFirst { item ->
++            item.id == id || (
++                item.name.trim().lowercase() == wantedName &&
++                    (wantedYear == null || item.releaseInfo == null || item.releaseInfo.take(4) == wantedYear)
++                )
++        }
++        if (index !in 0..9) return null
++        return (index + 1) to (if (isSeries) "TV Shows" else "Movies")
++    }
++
+     @Throws(Throwable::class)
+     suspend fun becauseYouWatchedChecked(maxRows: Int): List<HomeCatalogSection> = becauseYouWatched(maxRows)
+ 
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
+index 4f5dbe2a..a081b9e6 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
+@@ -9,6 +9,8 @@ internal expect object ForkHomeSettingsStorage {
+     fun saveBecauseRowsEnabled(enabled: Boolean)
+     fun loadTrendingRowsEnabled(): Boolean?
+     fun saveTrendingRowsEnabled(enabled: Boolean)
++    fun loadWhitePlayButton(): Boolean?
++    fun saveWhitePlayButton(enabled: Boolean)
+ }
+ 
+ /** Fork: on/off switches for the fork's own Home rows. Device-local, not synced. */
+@@ -17,6 +19,9 @@ object ForkHomeSettings {
+     val becauseRowsEnabled: StateFlow<Boolean> = _becauseRowsEnabled.asStateFlow()
+     private val _trendingRowsEnabled = MutableStateFlow(true)
+     val trendingRowsEnabled: StateFlow<Boolean> = _trendingRowsEnabled.asStateFlow()
++    private val _whitePlayButton = MutableStateFlow(false)
++    /** Fork: Netflix-style white Play button on the details page instead of the theme accent. */
++    val whitePlayButton: StateFlow<Boolean> = _whitePlayButton.asStateFlow()
+     private var loaded = false
+ 
+     fun ensureLoaded() {
+@@ -24,6 +29,13 @@ object ForkHomeSettings {
+         loaded = true
+         _becauseRowsEnabled.value = ForkHomeSettingsStorage.loadBecauseRowsEnabled() ?: true
+         _trendingRowsEnabled.value = ForkHomeSettingsStorage.loadTrendingRowsEnabled() ?: true
++        _whitePlayButton.value = ForkHomeSettingsStorage.loadWhitePlayButton() ?: false
++    }
++
++    fun setWhitePlayButton(enabled: Boolean) {
++        ensureLoaded()
++        _whitePlayButton.value = enabled
++        ForkHomeSettingsStorage.saveWhitePlayButton(enabled)
+     }
+ 
+     fun setTrendingRowsEnabled(enabled: Boolean) {
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/ForkNetflixDetailsSettings.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/ForkNetflixDetailsSettings.kt
+new file mode 100644
+index 00000000..545f9061
+--- /dev/null
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/ForkNetflixDetailsSettings.kt
+@@ -0,0 +1,63 @@
++package com.nuvio.app.features.settings
++
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.remember
++import androidx.lifecycle.compose.collectAsStateWithLifecycle
++import com.nuvio.app.features.details.MetaEpisodeCardStyle
++import com.nuvio.app.features.details.MetaScreenSectionKey
++import com.nuvio.app.features.details.MetaScreenSettingsRepository
++import com.nuvio.app.features.details.MetaScreenSettingsUiState
++import com.nuvio.app.features.home.ForkHomeSettings
++
++/** Fork: the tab the Netflix look puts Episodes / More Like This / Trailers in. */
++private const val NetflixTabGroup = 1
++private val NetflixTabbedSections = listOf(
++    MetaScreenSectionKey.EPISODES,
++    MetaScreenSectionKey.MORE_LIKE_THIS,
++    MetaScreenSectionKey.TRAILERS,
++)
++
++/**
++ * Fork: one tap to make the details page look like Netflix, using the page's own settings —
++ * trailer playing in the header, full-width Play with icon buttons under it, Episodes / More Like
++ * This / Trailers as tabs, wide episode cards — plus the fork's white Play button. Everything
++ * stays adjustable below. Also the switch for the white Play button on its own.
++ */
++@Composable
++internal fun ForkNetflixDetailsSettings(isTablet: Boolean, uiState: MetaScreenSettingsUiState) {
++    val whitePlay by remember {
++        ForkHomeSettings.ensureLoaded()
++        ForkHomeSettings.whitePlayButton
++    }.collectAsStateWithLifecycle()
++    SettingsNavigationRow(
++        title = "Netflix Style",
++        description = "Trailer in the header, white Play button, Episodes / More Like This / Trailers as tabs",
++        isTablet = isTablet,
++        onClick = { applyNetflixDetailsLook(uiState) },
++    )
++    SettingsGroupDivider(isTablet = isTablet)
++    SettingsSwitchRow(
++        title = "White Play Button",
++        description = "A white Play button like Netflix, instead of your theme colour",
++        checked = whitePlay,
++        isTablet = isTablet,
++        onCheckedChange = ForkHomeSettings::setWhitePlayButton,
++    )
++}
++
++private fun applyNetflixDetailsLook(uiState: MetaScreenSettingsUiState) {
++    MetaScreenSettingsRepository.setHeroTrailerPlayback(true)
++    MetaScreenSettingsRepository.setIconActionRow(true)
++    MetaScreenSettingsRepository.setEpisodeCardStyle(MetaEpisodeCardStyle.Horizontal)
++    // Free the tab for the three Netflix sections (a tab holds at most three).
++    uiState.items
++        .filter { it.tabGroup == NetflixTabGroup && it.key !in NetflixTabbedSections }
++        .forEach { MetaScreenSettingsRepository.setTabGroup(it.key, null) }
++    NetflixTabbedSections.forEach { key ->
++        MetaScreenSettingsRepository.setEnabled(key, true)
++        MetaScreenSettingsRepository.setTabGroup(key, NetflixTabGroup)
++    }
++    MetaScreenSettingsRepository.setTabLayout(true)
++    ForkHomeSettings.setWhitePlayButton(true)
++}
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/MetaScreenSettingsPage.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/MetaScreenSettingsPage.kt
+index 8033d602..246befe7 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/MetaScreenSettingsPage.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/MetaScreenSettingsPage.kt
+@@ -142,6 +142,9 @@ internal fun LazyListScope.metaScreenSettingsContent(
+             isTablet = isTablet,
+         ) {
+             SettingsGroup(isTablet = isTablet) {
++                // Fork: one-tap Netflix look + white Play button.
++                ForkNetflixDetailsSettings(isTablet = isTablet, uiState = uiState)
++                SettingsGroupDivider(isTablet = isTablet)
+                 SettingsChipRow(
+                     title = stringResource(Res.string.settings_meta_background_mode),
+                     description = stringResource(Res.string.settings_meta_background_mode_description),
+diff --git a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt
+index ca31fd26..b1b41fdb 100644
+--- a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt
++++ b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt
+@@ -5,6 +5,7 @@ import platform.Foundation.NSUserDefaults
+ internal actual object ForkHomeSettingsStorage {
+     private const val becauseKey = "fork_because_rows"
+     private const val trendingKey = "fork_trending_rows"
++    private const val whitePlayKey = "fork_white_play_button"
+ 
+     actual fun loadBecauseRowsEnabled(): Boolean? {
+         val defaults = NSUserDefaults.standardUserDefaults
+@@ -23,4 +24,13 @@ internal actual object ForkHomeSettingsStorage {
+     actual fun saveTrendingRowsEnabled(enabled: Boolean) {
+         NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = trendingKey)
+     }
++
++    actual fun loadWhitePlayButton(): Boolean? {
++        val defaults = NSUserDefaults.standardUserDefaults
++        return if (defaults.objectForKey(whitePlayKey) == null) null else defaults.boolForKey(whitePlayKey)
++    }
++
++    actual fun saveWhitePlayButton(enabled: Boolean) {
++        NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = whitePlayKey)
++    }
+ }
