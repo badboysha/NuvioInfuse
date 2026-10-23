@@ -1,0 +1,310 @@
+diff --git a/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt
+index c92fa8fb..db93bfb6 100644
+--- a/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt
++++ b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt
+@@ -8,6 +8,7 @@ internal actual object ForkHomeSettingsStorage {
+     private const val becauseKey = "fork_because_rows"
+     private const val trendingKey = "fork_trending_rows"
+     private const val whitePlayKey = "fork_white_play_button"
++    private const val kidsTrendingKey = "fork_kids_trending_profiles"
+ 
+     private var preferences: SharedPreferences? = null
+ 
+@@ -35,4 +36,10 @@ internal actual object ForkHomeSettingsStorage {
+     actual fun saveWhitePlayButton(enabled: Boolean) {
+         preferences?.edit()?.putBoolean(whitePlayKey, enabled)?.apply()
+     }
++
++    actual fun loadKidsTrendingProfiles(): String? = preferences?.getString(kidsTrendingKey, null)
++
++    actual fun saveKidsTrendingProfiles(value: String) {
++        preferences?.edit()?.putString(kidsTrendingKey, value)?.apply()
++    }
+ }
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt
+index 7e3b4dfb..aa8e760f 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt
+@@ -63,16 +63,41 @@ object ForkHomeRows {
+     private const val TRENDING_TTL_MS = 3 * 60 * 60 * 1000L
+     private var trendingRows: TrendingRows? = null
+     private var trendingFetchedAtMs = 0L
++    private var trendingKids = false
+ 
+-    suspend fun trending(nowEpochMs: Long): TrendingRows {
++    /** [kids]: kid-friendly lists for a kids profile (see [TmdbMetadataService.kidsPopular]). */
++    suspend fun trending(nowEpochMs: Long, kids: Boolean = false): TrendingRows {
+         mutex.withLock {
+             val cached = trendingRows
+-            if (cached != null && nowEpochMs - trendingFetchedAtMs < TRENDING_TTL_MS) return cached
++            if (cached != null && trendingKids == kids && nowEpochMs - trendingFetchedAtMs < TRENDING_TTL_MS) {
++                return cached
++            }
++            if (trendingKids != kids) {
++                // Never show the other mode's rows (or Top 10 badges) while these load.
++                trendingRows = null
++                trendingKids = kids
++            }
++        }
++        val shows: List<MetaPreview>
++        val movies: List<MetaPreview>
++        val week: List<MetaPreview>
++        if (kids) {
++            val allShows = TmdbMetadataService.kidsPopular("tv")
++            val allMovies = TmdbMetadataService.kidsPopular("movie")
++            shows = allShows.take(10)
++            movies = allMovies.take(10)
++            // Trending Now for kids: the next most popular shows and films, alternating.
++            val moreShows = allShows.drop(10)
++            val moreMovies = allMovies.drop(10)
++            week = (0 until maxOf(moreShows.size, moreMovies.size)).flatMap { i ->
++                listOfNotNull(moreMovies.getOrNull(i), moreShows.getOrNull(i))
++            }
++        } else {
++            shows = TmdbMetadataService.trending("tv", "day").take(10)
++            movies = TmdbMetadataService.trending("movie", "day").take(10)
++            val topIds = (shows + movies).map { it.id }.toSet()
++            week = TmdbMetadataService.trending("all", "week").filter { it.id !in topIds }
+         }
+-        val shows = TmdbMetadataService.trending("tv", "day").take(10)
+-        val movies = TmdbMetadataService.trending("movie", "day").take(10)
+-        val topIds = (shows + movies).map { it.id }.toSet()
+-        val week = TmdbMetadataService.trending("all", "week").filter { it.id !in topIds }
+         fun row(name: String, title: String, type: String, items: List<MetaPreview>, min: Int) =
+             if (items.size < min) null else section(TRENDING_KEY_PREFIX + name, title, type, items)
+         val rows = TrendingRows(
+@@ -83,6 +108,8 @@ object ForkHomeRows {
+         // Keep showing the old rows if this refresh came back empty (offline, TMDB down).
+         val usable = rows.topShows != null || rows.topMovies != null || rows.trendingNow != null
+         return mutex.withLock {
++            // The profile switched modes while this loaded: hand back these rows, cache nothing.
++            if (trendingKids != kids) return@withLock rows
+             if (usable || trendingRows == null) {
+                 trendingRows = rows
+                 trendingFetchedAtMs = if (usable) nowEpochMs else 0L
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
+index a081b9e6..86bdfefe 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
+@@ -11,6 +11,8 @@ internal expect object ForkHomeSettingsStorage {
+     fun saveTrendingRowsEnabled(enabled: Boolean)
+     fun loadWhitePlayButton(): Boolean?
+     fun saveWhitePlayButton(enabled: Boolean)
++    fun loadKidsTrendingProfiles(): String?
++    fun saveKidsTrendingProfiles(value: String)
+ }
+ 
+ /** Fork: on/off switches for the fork's own Home rows. Device-local, not synced. */
+@@ -22,6 +24,9 @@ object ForkHomeSettings {
+     private val _whitePlayButton = MutableStateFlow(false)
+     /** Fork: Netflix-style white Play button on the details page instead of the theme accent. */
+     val whitePlayButton: StateFlow<Boolean> = _whitePlayButton.asStateFlow()
++    private val _kidsTrendingProfiles = MutableStateFlow<Set<Int>>(emptySet())
++    /** Fork: profiles (by profile index) whose Top 10 / Trending rows only show kid-friendly titles. */
++    val kidsTrendingProfiles: StateFlow<Set<Int>> = _kidsTrendingProfiles.asStateFlow()
+     private var loaded = false
+ 
+     fun ensureLoaded() {
+@@ -30,6 +35,19 @@ object ForkHomeSettings {
+         _becauseRowsEnabled.value = ForkHomeSettingsStorage.loadBecauseRowsEnabled() ?: true
+         _trendingRowsEnabled.value = ForkHomeSettingsStorage.loadTrendingRowsEnabled() ?: true
+         _whitePlayButton.value = ForkHomeSettingsStorage.loadWhitePlayButton() ?: false
++        _kidsTrendingProfiles.value = ForkHomeSettingsStorage.loadKidsTrendingProfiles()
++            ?.split(',')
++            ?.mapNotNull { it.trim().toIntOrNull() }
++            ?.toSet()
++            ?: emptySet()
++    }
++
++    fun setKidsTrending(profileIndex: Int, enabled: Boolean) {
++        ensureLoaded()
++        val updated = if (enabled) _kidsTrendingProfiles.value + profileIndex
++        else _kidsTrendingProfiles.value - profileIndex
++        _kidsTrendingProfiles.value = updated
++        ForkHomeSettingsStorage.saveKidsTrendingProfiles(updated.sorted().joinToString(","))
+     }
+ 
+     fun setWhitePlayButton(enabled: Boolean) {
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
+index dbbeb32f..9a314b61 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
+@@ -348,9 +348,15 @@ fun HomeScreen(
+         ForkHomeSettings.ensureLoaded()
+         ForkHomeSettings.trendingRowsEnabled
+     }.collectAsStateWithLifecycle()
+-    LaunchedEffect(activeProfileId, trendingRowsEnabled) {
++    val kidsTrendingProfiles by remember {
++        ForkHomeSettings.ensureLoaded()
++        ForkHomeSettings.kidsTrendingProfiles
++    }.collectAsStateWithLifecycle()
++    val kidsTrending = activeProfileId in kidsTrendingProfiles
++    LaunchedEffect(activeProfileId, trendingRowsEnabled, kidsTrending) {
++        forkTrending = null
+         forkTrending = if (!trendingRowsEnabled) null
+-        else runCatching { ForkHomeRows.trending(WatchProgressClock.nowEpochMs()) }.getOrNull()
++        else runCatching { ForkHomeRows.trending(WatchProgressClock.nowEpochMs(), kids = kidsTrending) }.getOrNull()
+     }
+ 
+     LaunchedEffect(activeProfileId, continueWatchingListState) {
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt
+index 6e660e72..2e19e7c1 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt
+@@ -285,6 +285,26 @@ internal fun LazyListScope.homescreenSettingsContent(
+                         isTablet = isTablet,
+                         onCheckedChange = ForkHomeSettings::setTrendingRowsEnabled,
+                     )
++                    // Fork: kid-friendly Top 10 / Trending for this profile only.
++                    if (trendingRowsEnabled) {
++                        val forkProfileState by com.nuvio.app.features.profiles.ProfileRepository.state
++                            .collectAsStateWithLifecycle()
++                        val forkProfileIndex = forkProfileState.activeProfile?.profileIndex ?: 1
++                        val forkProfileName = forkProfileState.activeProfile?.name?.takeIf { it.isNotBlank() }
++                        val kidsTrendingProfiles by remember {
++                            ForkHomeSettings.ensureLoaded()
++                            ForkHomeSettings.kidsTrendingProfiles
++                        }.collectAsStateWithLifecycle()
++                        SettingsGroupDivider(isTablet = isTablet)
++                        SettingsSwitchRow(
++                            title = "Kids-Friendly Top 10",
++                            description = "Only family and kids titles in Top 10 and Trending for " +
++                                (forkProfileName?.let { "the $it profile" } ?: "this profile"),
++                            checked = forkProfileIndex in kidsTrendingProfiles,
++                            isTablet = isTablet,
++                            onCheckedChange = { ForkHomeSettings.setKidsTrending(forkProfileIndex, it) },
++                        )
++                    }
+                 }
+                 androidx.compose.foundation.layout.Spacer(
+                     Modifier.padding(top = if (isTablet) 16.dp else 12.dp),
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
+index b43375cc..5f9424d5 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
+@@ -1252,33 +1252,44 @@ object TmdbMetadataService {
+             endpoint = "trending/$mediaType/$window",
+             query = mapOf("language" to language),
+         ) ?: return emptyList()
+-        return response.results
+-            .filter { it.id > 0 }
+-            .mapNotNull { item ->
+-                val type = when (item.mediaType?.lowercase() ?: mediaType) {
+-                    "tv" -> "series"
+-                    "movie" -> "movie"
+-                    else -> return@mapNotNull null // people in the "all" list
+-                }
+-                val title = listOf(item.title, item.name, item.originalTitle, item.originalName)
+-                    .firstNotNullOfOrNull { it?.trim()?.takeIf(String::isNotBlank) }
+-                    ?: return@mapNotNull null
+-                MetaPreview(
+-                    id = "tmdb:${item.id}",
+-                    type = type,
+-                    name = title,
+-                    poster = buildImageUrl(item.posterPath, "w500")
+-                        ?: buildImageUrl(item.backdropPath, "w780"),
+-                    banner = buildImageUrl(item.backdropPath, "w1280"),
+-                    posterShape = PosterShape.Poster,
+-                    description = item.overview?.trim()?.takeIf(String::isNotBlank),
+-                    releaseInfo = (item.releaseDate ?: item.firstAirDate)?.take(4),
+-                    rawReleaseDate = item.releaseDate ?: item.firstAirDate,
+-                    imdbRating = item.voteAverage?.formatRating(),
+-                )
+-            }
++        return forkMapTrending(response.results, mediaType)
++    }
++
++    /**
++     * Fork: kid-friendly stand-in for [trending] on kids profiles — today's most popular titles
++     * that TMDB files as Family / Animation films rated PG or lower in the US, or Kids / Family
++     * shows. [mediaType] is "movie" or "tv".
++     */
++    suspend fun kidsPopular(mediaType: String): List<MetaPreview> {
++        val language = normalizeTmdbLanguage(TmdbSettingsRepository.snapshot().language)
++        val query = if (mediaType == "movie") {
++            mapOf(
++                "language" to language,
++                "sort_by" to "popularity.desc",
++                "include_adult" to "false",
++                "certification_country" to "US",
++                "certification.lte" to "PG",
++                "with_genres" to "10751|16",
++                "vote_count.gte" to "50",
++            )
++        } else {
++            mapOf(
++                "language" to language,
++                "sort_by" to "popularity.desc",
++                "include_adult" to "false",
++                "with_genres" to "10762|10751",
++                "without_genres" to "80|18|10768",
++                "vote_count.gte" to "20",
++            )
++        }
++        val response = fetch<TmdbRecommendationResponse>(
++            endpoint = "discover/$mediaType",
++            query = query,
++        ) ?: return emptyList()
++        return forkMapTrending(response.results, mediaType)
+     }
+ 
++
+     private suspend fun fetchMoreLikeThis(
+         tmdbId: Int,
+         mediaType: String,
+@@ -2338,3 +2349,31 @@ internal data class TmdbDiscoverResult(
+     @SerialName("vote_average") val voteAverage: Double? = null,
+     @SerialName("vote_count") val voteCount: Int? = null,
+ )
++
++/** Fork: TMDB list items → previews for the Top 10 / Trending rows (people dropped). */
++private fun forkMapTrending(results: List<TmdbRecommendationItem>, mediaType: String): List<MetaPreview> =
++    results
++        .filter { it.id > 0 }
++        .mapNotNull { item ->
++            val type = when (item.mediaType?.lowercase() ?: mediaType) {
++                "tv" -> "series"
++                "movie" -> "movie"
++                else -> return@mapNotNull null // people in the "all" list
++            }
++            val title = listOf(item.title, item.name, item.originalTitle, item.originalName)
++                .firstNotNullOfOrNull { it?.trim()?.takeIf(String::isNotBlank) }
++                ?: return@mapNotNull null
++            MetaPreview(
++                id = "tmdb:${item.id}",
++                type = type,
++                name = title,
++                poster = buildImageUrl(item.posterPath, "w500")
++                    ?: buildImageUrl(item.backdropPath, "w780"),
++                banner = buildImageUrl(item.backdropPath, "w1280"),
++                posterShape = PosterShape.Poster,
++                description = item.overview?.trim()?.takeIf(String::isNotBlank),
++                releaseInfo = (item.releaseDate ?: item.firstAirDate)?.take(4),
++                rawReleaseDate = item.releaseDate ?: item.firstAirDate,
++                imdbRating = item.voteAverage?.formatRating(),
++            )
++        }
+diff --git a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt
+index b1b41fdb..77664415 100644
+--- a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt
++++ b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt
+@@ -6,6 +6,7 @@ internal actual object ForkHomeSettingsStorage {
+     private const val becauseKey = "fork_because_rows"
+     private const val trendingKey = "fork_trending_rows"
+     private const val whitePlayKey = "fork_white_play_button"
++    private const val kidsTrendingKey = "fork_kids_trending_profiles"
+ 
+     actual fun loadBecauseRowsEnabled(): Boolean? {
+         val defaults = NSUserDefaults.standardUserDefaults
+@@ -33,4 +34,11 @@ internal actual object ForkHomeSettingsStorage {
+     actual fun saveWhitePlayButton(enabled: Boolean) {
+         NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = whitePlayKey)
+     }
++
++    actual fun loadKidsTrendingProfiles(): String? =
++        NSUserDefaults.standardUserDefaults.stringForKey(kidsTrendingKey)
++
++    actual fun saveKidsTrendingProfiles(value: String) {
++        NSUserDefaults.standardUserDefaults.setObject(value, forKey = kidsTrendingKey)
++    }
+ }
