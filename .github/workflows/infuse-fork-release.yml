@@ -3,7 +3,7 @@ name: Infuse Fork Release
 # Builds an unsigned iOS IPA of NuvioMobile-Enhanced (luqmanfadlli/NuvioMobile-Enhanced, branch
 # `enhanced`, which carries official Nuvio plus its own features) with the patches in /patches
 # applied, and publishes it as a GitHub release (picked up by the Raspberry Pi release watcher).
-# Checks every 6 hours and rebuilds when the Enhanced branch has moved. A change to /patches or
+# Checks every 6 hours, but builds at most once a day (Toronto 2-9 pm) when the Enhanced branch has moved. A change to /patches or
 # this file also triggers a rebuild.
 
 on:
@@ -80,9 +80,22 @@ jobs:
           echo "version=${version}" >> "$GITHUB_OUTPUT"
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
           echo "Source: ${SOURCE_REPO} ${upstream_tag}, version ${version}"
+          # Enhanced changes many times a day. Scheduled and Pi-triggered runs build at most once
+          # a day, and only in the Toronto afternoon/evening, so the phone is reinstalled once,
+          # while it is usually home and awake. A push here (patch change) or force always builds.
+          last_published="$(gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=1" --jq '.[0].published_at // empty')"
+          age_hours=999
+          if [[ -n "${last_published}" ]]; then
+            age_hours=$(( ( $(date -u +%s) - $(date -u -d "${last_published}" +%s) ) / 3600 ))
+          fi
+          local_hour=$((10#$(TZ=America/Toronto date +%H)))
           if gh release view "${tag}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1 \
              && [[ "${{ inputs.force }}" != "true" ]]; then
             echo "Release ${tag} already exists; nothing to do."
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.event_name }}" != "push" && "${{ inputs.force }}" != "true" ]] \
+               && (( age_hours < 20 || local_hour < 14 || local_hour >= 21 )); then
+            echo "Daily build window: last release ${age_hours}h ago, Toronto hour ${local_hour}; skipping."
             echo "build=false" >> "$GITHUB_OUTPUT"
           else
             echo "Will build ${tag}."
