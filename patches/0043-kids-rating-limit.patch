@@ -1,0 +1,387 @@
+diff --git a/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt
+index db93bfb68..ecd694d52 100644
+--- a/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt
++++ b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt
+@@ -9,6 +9,7 @@ internal actual object ForkHomeSettingsStorage {
+     private const val trendingKey = "fork_trending_rows"
+     private const val whitePlayKey = "fork_white_play_button"
+     private const val kidsTrendingKey = "fork_kids_trending_profiles"
++    private const val kidsLimitKey = "fork_kids_limit_profiles"
+ 
+     private var preferences: SharedPreferences? = null
+ 
+@@ -39,6 +40,12 @@ internal actual object ForkHomeSettingsStorage {
+ 
+     actual fun loadKidsTrendingProfiles(): String? = preferences?.getString(kidsTrendingKey, null)
+ 
++    actual fun loadKidsLimitProfiles(): String? = preferences?.getString(kidsLimitKey, null)
++
++    actual fun saveKidsLimitProfiles(value: String) {
++        preferences?.edit()?.putString(kidsLimitKey, value)?.apply()
++    }
++
+     actual fun saveKidsTrendingProfiles(value: String) {
+         preferences?.edit()?.putString(kidsTrendingKey, value)?.apply()
+     }
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/collection/FolderDetailScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/collection/FolderDetailScreen.kt
+index 4ade5f022..ab9053651 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/collection/FolderDetailScreen.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/collection/FolderDetailScreen.kt
+@@ -1,5 +1,6 @@
+ package com.nuvio.app.features.collection
+ 
++import com.nuvio.app.features.home.forkKids
+ import androidx.compose.foundation.background
+ import androidx.compose.foundation.layout.BoxWithConstraints
+ import androidx.compose.foundation.layout.Arrangement
+@@ -266,6 +267,7 @@ private fun TabbedGridContent(
+ 
+         Spacer(modifier = Modifier.height(8.dp))
+ 
++        val forkKidsFilter = com.nuvio.app.features.home.rememberForkKidsFilter() // Fork: kids rating limit
+         val selectedTab = uiState.tabs.getOrNull(uiState.selectedTabIndex)
+         if (selectedTab == null) return
+ 
+@@ -290,7 +292,7 @@ private fun TabbedGridContent(
+                         verticalArrangement = Arrangement.spacedBy(14.dp),
+                     ) {
+                         items(
+-                            items = selectedTab.items.withDuplicateSafeLazyKeys { item -> item.stableKey() },
++                            items = forkKidsFilter(selectedTab.items).withDuplicateSafeLazyKeys { item -> item.stableKey() },
+                             key = { item -> item.lazyKey },
+                         ) { keyedItem ->
+                             val item = keyedItem.value
+@@ -328,7 +330,8 @@ private fun RowsContent(
+     onCatalogClick: (HomeCatalogSection) -> Unit,
+     onPosterClick: (MetaPreview) -> Unit,
+ ) {
+-    val sections = FolderDetailRepository.getCatalogSectionsForRows()
++    val forkKidsFilter = com.nuvio.app.features.home.rememberForkKidsFilter() // Fork: kids rating limit
++    val sections = FolderDetailRepository.getCatalogSectionsForRows().forkKids(forkKidsFilter)
+ 
+     if (uiState.isLoading && sections.isEmpty()) {
+         LoadingIndicator()
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/MetaDetailsScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/MetaDetailsScreen.kt
+index 45a52b701..51d77dfd8 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/MetaDetailsScreen.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/MetaDetailsScreen.kt
+@@ -2594,7 +2594,7 @@ private fun ConfiguredMetaSections(
+                     }
+                     DetailPosterRailSection(
+                         title = stringResource(Res.string.details_more_like_this),
+-                        items = meta.moreLikeThis,
++                        items = com.nuvio.app.features.home.rememberForkKidsFilter()(meta.moreLikeThis), // Fork: kids rating limit
+                         watchedKeys = watchedKeys,
+                         fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
+                         showHeader = showHeader,
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
+index 86bdfefe9..9105b7e1a 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
+@@ -13,6 +13,8 @@ internal expect object ForkHomeSettingsStorage {
+     fun saveWhitePlayButton(enabled: Boolean)
+     fun loadKidsTrendingProfiles(): String?
+     fun saveKidsTrendingProfiles(value: String)
++    fun loadKidsLimitProfiles(): String?
++    fun saveKidsLimitProfiles(value: String)
+ }
+ 
+ /** Fork: on/off switches for the fork's own Home rows. Device-local, not synced. */
+@@ -27,6 +29,9 @@ object ForkHomeSettings {
+     private val _kidsTrendingProfiles = MutableStateFlow<Set<Int>>(emptySet())
+     /** Fork: profiles (by profile index) whose Top 10 / Trending rows only show kid-friendly titles. */
+     val kidsTrendingProfiles: StateFlow<Set<Int>> = _kidsTrendingProfiles.asStateFlow()
++    private val _kidsLimitProfiles = MutableStateFlow<Set<Int>>(emptySet())
++    /** Fork: profiles (by profile index) that only see titles rated up to PG / TV-PG. */
++    val kidsLimitProfiles: StateFlow<Set<Int>> = _kidsLimitProfiles.asStateFlow()
+     private var loaded = false
+ 
+     fun ensureLoaded() {
+@@ -35,6 +40,11 @@ object ForkHomeSettings {
+         _becauseRowsEnabled.value = ForkHomeSettingsStorage.loadBecauseRowsEnabled() ?: true
+         _trendingRowsEnabled.value = ForkHomeSettingsStorage.loadTrendingRowsEnabled() ?: true
+         _whitePlayButton.value = ForkHomeSettingsStorage.loadWhitePlayButton() ?: false
++        _kidsLimitProfiles.value = ForkHomeSettingsStorage.loadKidsLimitProfiles()
++            ?.split(',')
++            ?.mapNotNull { it.trim().toIntOrNull() }
++            ?.toSet()
++            ?: emptySet()
+         _kidsTrendingProfiles.value = ForkHomeSettingsStorage.loadKidsTrendingProfiles()
+             ?.split(',')
+             ?.mapNotNull { it.trim().toIntOrNull() }
+@@ -42,6 +52,14 @@ object ForkHomeSettings {
+             ?: emptySet()
+     }
+ 
++    fun setKidsLimit(profileIndex: Int, enabled: Boolean) {
++        ensureLoaded()
++        val updated = if (enabled) _kidsLimitProfiles.value + profileIndex
++        else _kidsLimitProfiles.value - profileIndex
++        _kidsLimitProfiles.value = updated
++        ForkHomeSettingsStorage.saveKidsLimitProfiles(updated.sorted().joinToString(","))
++    }
++
+     fun setKidsTrending(profileIndex: Int, enabled: Boolean) {
+         ensureLoaded()
+         val updated = if (enabled) _kidsTrendingProfiles.value + profileIndex
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkKidsFilter.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkKidsFilter.kt
+new file mode 100644
+index 000000000..59206924e
+--- /dev/null
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkKidsFilter.kt
+@@ -0,0 +1,117 @@
++package com.nuvio.app.features.home
++
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.remember
++import androidx.lifecycle.compose.collectAsStateWithLifecycle
++import com.nuvio.app.features.profiles.ProfileRepository
++import com.nuvio.app.features.tmdb.TmdbMetadataService
++import kotlinx.coroutines.CoroutineScope
++import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.SupervisorJob
++import kotlinx.coroutines.async
++import kotlinx.coroutines.awaitAll
++import kotlinx.coroutines.coroutineScope
++import kotlinx.coroutines.flow.MutableStateFlow
++import kotlinx.coroutines.flow.StateFlow
++import kotlinx.coroutines.flow.asStateFlow
++import kotlinx.coroutines.flow.update
++import kotlinx.coroutines.launch
++import kotlinx.coroutines.sync.Mutex
++import kotlinx.coroutines.sync.Semaphore
++import kotlinx.coroutines.sync.withLock
++import kotlinx.coroutines.sync.withPermit
++
++/**
++ * Fork: kids rating limit (Disney+-style). On a profile with it on, titles rated above
++ * PG / TV-PG are hidden from Home rows, collections, search and More Like This. Ratings come
++ * from TMDB (US first) and are kept for the session; titles with no known rating stay hidden.
++ */
++object ForkKidsFilter {
++    private val allowedRatings = setOf(
++        "G", "PG", "TV-Y", "TV-Y7", "TV-Y7-FV", "TV-G", "TV-PG",
++        "U", "UC", "0", "6", "L", "AL", "ALL", "TP", "LIVRE",
++    )
++
++    private val _verdicts = MutableStateFlow<Map<String, Boolean>>(emptyMap())
++    /** Item key → may a kids profile see it. Grows as ratings arrive. */
++    val verdicts: StateFlow<Map<String, Boolean>> = _verdicts.asStateFlow()
++
++    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
++    private val limiter = Semaphore(6)
++    private val inFlightMutex = Mutex()
++    private val inFlight = mutableSetOf<String>()
++
++    fun isAllowedRating(rating: String?): Boolean {
++        val normalized = rating?.trim()?.uppercase().orEmpty()
++        return normalized.isNotEmpty() && normalized in allowedRatings
++    }
++
++    private fun key(item: MetaPreview) = item.stableKey()
++
++    /** Items a kids profile may see now; unknown ratings are looked up and fill in later. */
++    fun visible(items: List<MetaPreview>, known: Map<String, Boolean>): List<MetaPreview> {
++        val unknown = items.filter { known[key(it)] == null }
++        if (unknown.isNotEmpty()) request(unknown)
++        return items.filter { known[key(it)] == true }
++    }
++
++    private fun request(items: List<MetaPreview>) {
++        scope.launch {
++            val fresh = inFlightMutex.withLock {
++                items.filter { inFlight.add(key(it)) }
++            }
++            fresh.forEach { item ->
++                launch {
++                    val ok = limiter.withPermit {
++                        isAllowedRating(runCatching { TmdbMetadataService.forkAgeRating(item.id, item.type) }.getOrNull())
++                    }
++                    _verdicts.update { it + (key(item) to ok) }
++                    inFlightMutex.withLock { inFlight.remove(key(item)) }
++                }
++            }
++        }
++    }
++
++    /** Waits for every rating first (search: a short list worth a brief wait). */
++    suspend fun resolvedVisible(items: List<MetaPreview>): List<MetaPreview> {
++        val known = _verdicts.value
++        coroutineScope {
++            items.filter { known[key(it)] == null }.take(60).map { item ->
++                async {
++                    val ok = limiter.withPermit {
++                        isAllowedRating(runCatching { TmdbMetadataService.forkAgeRating(item.id, item.type) }.getOrNull())
++                    }
++                    _verdicts.update { it + (key(item) to ok) }
++                }
++            }.awaitAll()
++        }
++        val now = _verdicts.value
++        return items.filter { now[key(it)] == true }
++    }
++}
++
++/** Fork: the active profile's kids filter — returns the list unchanged when the limit is off. */
++@Composable
++fun rememberForkKidsFilter(): (List<MetaPreview>) -> List<MetaPreview> {
++    val profileState by ProfileRepository.state.collectAsStateWithLifecycle()
++    val profileIndex = profileState.activeProfile?.profileIndex ?: 1
++    val limitProfiles by remember {
++        ForkHomeSettings.ensureLoaded()
++        ForkHomeSettings.kidsLimitProfiles
++    }.collectAsStateWithLifecycle()
++    val known by ForkKidsFilter.verdicts.collectAsStateWithLifecycle()
++    val active = profileIndex in limitProfiles
++    return remember(active, known) {
++        if (!active) { items -> items } else { items -> ForkKidsFilter.visible(items, known) }
++    }
++}
++
++/** Fork: the same filter over catalog sections (empty sections are dropped). */
++fun List<HomeCatalogSection>.forkKids(filter: (List<MetaPreview>) -> List<MetaPreview>): List<HomeCatalogSection> =
++    mapNotNull { section ->
++        val items = filter(section.items)
++        if (items === section.items) section
++        else if (items.isEmpty()) null
++        else section.copy(items = items, availableItemCount = items.size)
++    }
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
+index 1118edf24..ded95c684 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
+@@ -939,8 +939,9 @@ fun HomeScreen(
+     val collectionsMap = remember(visibleCollections) {
+         visibleCollections.associateBy { "collection_${it.id}" }
+     }
+-    val sectionsMap = remember(homeUiState.sections) {
+-        homeUiState.sections.associateBy(HomeCatalogSection::key)
++    val forkKidsFilter = rememberForkKidsFilter() // Fork: kids rating limit
++    val sectionsMap = remember(homeUiState.sections, forkKidsFilter) {
++        homeUiState.sections.forkKids(forkKidsFilter).associateBy(HomeCatalogSection::key)
+     }
+     val enabledHomeItems = remember(homeSettingsUiState.items) {
+         homeSettingsUiState.items.filter { it.enabled }
+@@ -1218,7 +1219,8 @@ fun HomeScreen(
+                         val forkRowsInOrder = listOfNotNull(forkTrendingRows?.topShows) +
+                             forkRows +
+                             listOfNotNull(forkTrendingRows?.topMovies) // Fork: no Trending Now row (Trending / New covers it)
+-                        forkRowsInOrder.forEach { section ->
++                        val forkVisibleRows = forkRowsInOrder.forkKids(forkKidsFilter)
++                        forkVisibleRows.forEach { section ->
+                             item(key = section.key, contentType = "catalog") {
+                                 HomeCatalogRowSection(
+                                     section = section,
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/search/SearchScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/search/SearchScreen.kt
+index 594645c17..03e145202 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/search/SearchScreen.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/search/SearchScreen.kt
+@@ -1,5 +1,6 @@
+ package com.nuvio.app.features.search
+ 
++import com.nuvio.app.features.home.forkKids
+ import androidx.compose.foundation.clickable
+ import androidx.compose.foundation.background
+ import androidx.compose.foundation.layout.Arrangement
+@@ -185,6 +186,7 @@ fun SearchScreen(
+             }
+     }
+ 
++    val forkKidsFilter = com.nuvio.app.features.home.rememberForkKidsFilter() // Fork: kids rating limit
+     ScreenActivityEffect(query, lastRequestedQuery, uiState.isLoading, uiState.sections) { screenActive ->
+         if (!screenActive) return@ScreenActivityEffect
+         val normalizedQuery = query.trim()
+@@ -392,7 +394,7 @@ fun SearchScreen(
+ 
+                         else -> {
+                             items(
+-                                items = uiState.sections.withDuplicateSafeLazyKeys { section -> section.key },
++                                items = uiState.sections.forkKids(forkKidsFilter).withDuplicateSafeLazyKeys { section -> section.key },
+                                 key = { section -> section.lazyKey },
+                             ) { keyedSection ->
+                                 val section = keyedSection.value
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt
+index 2e19e7c15..032c9d0b4 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt
+@@ -305,6 +305,26 @@ internal fun LazyListScope.homescreenSettingsContent(
+                             onCheckedChange = { ForkHomeSettings.setKidsTrending(forkProfileIndex, it) },
+                         )
+                     }
++                    // Fork: Disney+-style rating limit for this profile only.
++                    run {
++                        val forkLimitProfileState by com.nuvio.app.features.profiles.ProfileRepository.state
++                            .collectAsStateWithLifecycle()
++                        val forkLimitIndex = forkLimitProfileState.activeProfile?.profileIndex ?: 1
++                        val forkLimitName = forkLimitProfileState.activeProfile?.name?.takeIf { it.isNotBlank() }
++                        val kidsLimitProfiles by remember {
++                            ForkHomeSettings.ensureLoaded()
++                            ForkHomeSettings.kidsLimitProfiles
++                        }.collectAsStateWithLifecycle()
++                        SettingsGroupDivider(isTablet = isTablet)
++                        SettingsSwitchRow(
++                            title = "Kids Rating Limit",
++                            description = "Hide titles rated above PG / TV-PG everywhere for " +
++                                (forkLimitName?.let { "the $it profile" } ?: "this profile"),
++                            checked = forkLimitIndex in kidsLimitProfiles,
++                            isTablet = isTablet,
++                            onCheckedChange = { ForkHomeSettings.setKidsLimit(forkLimitIndex, it) },
++                        )
++                    }
+                 }
+                 androidx.compose.foundation.layout.Spacer(
+                     Modifier.padding(top = if (isTablet) 16.dp else 12.dp),
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
+index 5f9424d57..801bb5ac1 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
+@@ -1260,6 +1260,22 @@ object TmdbMetadataService {
+      * that TMDB files as Family / Animation films rated PG or lower in the US, or Kids / Family
+      * shows. [mediaType] is "movie" or "tv".
+      */
++    /**
++     * Fork: kids rating limit — a title's age rating (US first) for any Nuvio id (tt… / tmdb:…),
++     * or null when TMDB has none or the title can't be matched.
++     */
++    suspend fun forkAgeRating(id: String, type: String): String? {
++        val mediaType = if (type.equals("series", true) || type.equals("tv", true)) "tv" else "movie"
++        val tmdbId = runCatching { TmdbService.ensureTmdbId(id, mediaType) }.getOrNull()
++            ?.toIntOrNull() ?: return null
++        return when (mediaType) {
++            "tv" -> fetch<TmdbTvContentRatingsResponse>(endpoint = "tv/$tmdbId/content_ratings")
++                ?.results.orEmpty().selectTvAgeRating("en-US")
++            else -> fetch<TmdbMovieReleaseDatesResponse>(endpoint = "movie/$tmdbId/release_dates")
++                ?.results.orEmpty().selectMovieAgeRating("en-US")
++        }
++    }
++
+     suspend fun kidsPopular(mediaType: String): List<MetaPreview> {
+         val language = normalizeTmdbLanguage(TmdbSettingsRepository.snapshot().language)
+         val query = if (mediaType == "movie") {
+diff --git a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt
+index 776644157..9fdd507bb 100644
+--- a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt
++++ b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt
+@@ -7,6 +7,7 @@ internal actual object ForkHomeSettingsStorage {
+     private const val trendingKey = "fork_trending_rows"
+     private const val whitePlayKey = "fork_white_play_button"
+     private const val kidsTrendingKey = "fork_kids_trending_profiles"
++    private const val kidsLimitKey = "fork_kids_limit_profiles"
+ 
+     actual fun loadBecauseRowsEnabled(): Boolean? {
+         val defaults = NSUserDefaults.standardUserDefaults
+@@ -35,6 +36,13 @@ internal actual object ForkHomeSettingsStorage {
+         NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = whitePlayKey)
+     }
+ 
++    actual fun loadKidsLimitProfiles(): String? =
++        NSUserDefaults.standardUserDefaults.stringForKey(kidsLimitKey)
++
++    actual fun saveKidsLimitProfiles(value: String) {
++        NSUserDefaults.standardUserDefaults.setObject(value, forKey = kidsLimitKey)
++    }
++
+     actual fun loadKidsTrendingProfiles(): String? =
+         NSUserDefaults.standardUserDefaults.stringForKey(kidsTrendingKey)
+ 
