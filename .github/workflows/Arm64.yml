@@ -1,0 +1,118 @@
+name: Build Android arm64 APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build Type (release or debug)'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - debug
+  push:
+    paths:
+      - 'patches/**'
+      - '.github/workflows/build-android.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    name: Build arm64 Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout this repo (with patches)
+        uses: actions/checkout@v4
+        with:
+          path: fork
+
+      - name: Clone Upstream Enhanced Source
+        run: |
+          git clone --depth 1 --branch enhanced https://github.com/luqmanfadlli/NuvioMobile-Enhanced.git src
+
+      - name: Apply All Fork Patches
+        working-directory: src
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          base="$(cat ../fork/patches/BASE 2>/dev/null || echo '')"
+          echo "Applying patches on base: ${base}"
+          
+          for patch in ../fork/patches/*.patch; do
+            name="$(basename "${patch}")"
+            echo "Applying ${name}..."
+            if ! git apply --3way "${patch}"; then
+              echo "Failed to apply ${name}"
+              exit 1
+            fi
+            git commit -am "${name}"
+          done
+          echo "All patches applied successfully!"
+
+      - name: Generate Keystore for Release Signing
+        working-directory: src
+        run: |
+          keytool -genkeypair -v \
+            -keystore nuvio.keystore \
+            -alias nuvio \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass nuviopass \
+            -keypass nuviopass \
+            -dname "CN=Nuvio, OU=App, O=Nuvio, L=Global, S=Global, C=US"
+
+      - name: Write runtime properties
+        working-directory: src
+        env:
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+        run: |
+          cat << 'EOF' > local.properties
+          NUVIO_SUPABASE_URL=https://api.nuvio.tv
+          NUVIO_SUPABASE_FALLBACK_URL=https://api-two.nuvioapp.space
+          NUVIO_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzgxNTIxMzQ2LCJleHAiOjE5MzkyMDEzNDZ9.tmQaj682pwzehpqlgCDMnySOqiUvpgRbrE43T4VJpDI
+          IMDB_RATINGS_API_BASE_URL=https://seriesgraph.com/
+          IMDB_TAPFRAME_API_BASE_URL=https://imdb.tapframe.space/
+          INTRODB_API_URL=https://api.introdb.app/
+          MDBLIST_CLIENT_ID=ESQBBlL7gpsyGj4a0rp5iInnxlVF7FvKE3BRPBdc
+          NUVIO_RELEASE_STORE_FILE=nuvio.keystore
+          NUVIO_RELEASE_STORE_PASSWORD=nuviopass
+          NUVIO_RELEASE_KEY_ALIAS=nuvio
+          NUVIO_RELEASE_KEY_PASSWORD=nuviopass
+          EOF
+          if [ -n "$TMDB_API_KEY" ]; then
+            echo "TMDB_API_KEY=$TMDB_API_KEY" >> local.properties
+          fi
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Build Android APK
+        working-directory: src
+        run: |
+          if [ "${{ github.event.inputs.build_type }}" == "debug" ]; then
+            ./gradlew :androidApp:assembleFullDebug --stacktrace
+          else
+            ./gradlew :androidApp:assembleFullRelease --stacktrace
+          fi
+
+      - name: Upload arm64-v8a APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuvio-arm64-v8a-apk
+          path: |
+            src/androidApp/build/outputs/apk/full/release/*arm64-v8a*.apk
+            src/androidApp/build/outputs/apk/full/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
