@@ -1,0 +1,243 @@
+diff --git a/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt
+index ecd694d52..9f79ef8cb 100644
+--- a/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt
++++ b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt
+@@ -10,6 +10,7 @@ internal actual object ForkHomeSettingsStorage {
+     private const val whitePlayKey = "fork_white_play_button"
+     private const val kidsTrendingKey = "fork_kids_trending_profiles"
+     private const val kidsLimitKey = "fork_kids_limit_profiles"
++    private const val stillWatchingOffKey = "fork_still_watching_off_profiles"
+ 
+     private var preferences: SharedPreferences? = null
+ 
+@@ -40,6 +41,12 @@ internal actual object ForkHomeSettingsStorage {
+ 
+     actual fun loadKidsTrendingProfiles(): String? = preferences?.getString(kidsTrendingKey, null)
+ 
++    actual fun loadStillWatchingOffProfiles(): String? = preferences?.getString(stillWatchingOffKey, null)
++
++    actual fun saveStillWatchingOffProfiles(value: String) {
++        preferences?.edit()?.putString(stillWatchingOffKey, value)?.apply()
++    }
++
+     actual fun loadKidsLimitProfiles(): String? = preferences?.getString(kidsLimitKey, null)
+ 
+     actual fun saveKidsLimitProfiles(value: String) {
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
+index 9105b7e1a..e2db09a50 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
+@@ -15,6 +15,8 @@ internal expect object ForkHomeSettingsStorage {
+     fun saveKidsTrendingProfiles(value: String)
+     fun loadKidsLimitProfiles(): String?
+     fun saveKidsLimitProfiles(value: String)
++    fun loadStillWatchingOffProfiles(): String?
++    fun saveStillWatchingOffProfiles(value: String)
+ }
+ 
+ /** Fork: on/off switches for the fork's own Home rows. Device-local, not synced. */
+@@ -32,6 +34,9 @@ object ForkHomeSettings {
+     private val _kidsLimitProfiles = MutableStateFlow<Set<Int>>(emptySet())
+     /** Fork: profiles (by profile index) that only see titles rated up to PG / TV-PG. */
+     val kidsLimitProfiles: StateFlow<Set<Int>> = _kidsLimitProfiles.asStateFlow()
++    private val _stillWatchingOffProfiles = MutableStateFlow<Set<Int>>(emptySet())
++    /** Fork: profiles that turned "Are you still watching?" off (it's on by default). */
++    val stillWatchingOffProfiles: StateFlow<Set<Int>> = _stillWatchingOffProfiles.asStateFlow()
+     private var loaded = false
+ 
+     fun ensureLoaded() {
+@@ -40,6 +45,11 @@ object ForkHomeSettings {
+         _becauseRowsEnabled.value = ForkHomeSettingsStorage.loadBecauseRowsEnabled() ?: true
+         _trendingRowsEnabled.value = ForkHomeSettingsStorage.loadTrendingRowsEnabled() ?: true
+         _whitePlayButton.value = ForkHomeSettingsStorage.loadWhitePlayButton() ?: false
++        _stillWatchingOffProfiles.value = ForkHomeSettingsStorage.loadStillWatchingOffProfiles()
++            ?.split(',')
++            ?.mapNotNull { it.trim().toIntOrNull() }
++            ?.toSet()
++            ?: emptySet()
+         _kidsLimitProfiles.value = ForkHomeSettingsStorage.loadKidsLimitProfiles()
+             ?.split(',')
+             ?.mapNotNull { it.trim().toIntOrNull() }
+@@ -52,6 +62,14 @@ object ForkHomeSettings {
+             ?: emptySet()
+     }
+ 
++    fun setStillWatching(profileIndex: Int, enabled: Boolean) {
++        ensureLoaded()
++        val updated = if (enabled) _stillWatchingOffProfiles.value - profileIndex
++        else _stillWatchingOffProfiles.value + profileIndex
++        _stillWatchingOffProfiles.value = updated
++        ForkHomeSettingsStorage.saveStillWatchingOffProfiles(updated.sorted().joinToString(","))
++    }
++
+     fun setKidsLimit(profileIndex: Int, enabled: Boolean) {
+         ensureLoaded()
+         val updated = if (enabled) _kidsLimitProfiles.value + profileIndex
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalUpNext.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalUpNext.kt
+index 8f23117ec..5ef45fd10 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalUpNext.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/player/ExternalUpNext.kt
+@@ -40,8 +40,35 @@ internal object ExternalUpNext {
+     private val pendingState = MutableStateFlow<Pending?>(null)
+     val pending = pendingState.asStateFlow()
+ 
++    // Fork: "Are you still watching?" — episodes the countdown started that then ran to the end
++    // in Infuse without being stopped. Reset by any stop, tap or hand-started episode.
++    private var autoChain = 0
++    private var autoStartedVideoId: String? = null
++    const val STILL_WATCHING_LIMIT = 3
++
++    /** True when the next countdown should ask first instead of playing on. */
++    fun shouldAskStillWatching(profileIndex: Int): Boolean {
++        com.nuvio.app.features.home.ForkHomeSettings.ensureLoaded()
++        val off = profileIndex in com.nuvio.app.features.home.ForkHomeSettings.stillWatchingOffProfiles.value
++        return !off && autoChain >= STILL_WATCHING_LIMIT
++    }
++
++    /** The countdown is about to start this episode on its own. */
++    fun noteAutoStart(next: NextEpisodeInfo) {
++        autoChain += 1
++        autoStartedVideoId = next.videoId
++    }
++
++    /** Someone chose to keep going (tap, or "Continue Watching"). */
++    fun resetStillWatching() {
++        autoChain = 0
++        autoStartedVideoId = null
++    }
++
+     suspend fun onExternalPlaybackReturned(result: ExternalPlaybackResult, fallbackSession: WatchProgressPlaybackSession?) {
+         val session = result.playbackSession ?: fallbackSession ?: return
++        // Fork: stopping in Infuse, or an episode the countdown didn't start, breaks the chain.
++        if (result.endedByUser || session.videoId != autoStartedVideoId) resetStillWatching()
+         val season = session.seasonNumber ?: return
+         val episode = session.episodeNumber ?: return
+         if (session.parentMetaType == "movie") return
+@@ -94,6 +121,7 @@ internal fun ExternalUpNextOverlay(
+     val pending by ExternalUpNext.pending.collectAsStateWithLifecycle()
+     val currentOnPlayNext by rememberUpdatedState(onPlayNext)
+     var countdown by remember { mutableStateOf<Int?>(null) }
++    var askStillWatching by remember { mutableStateOf<ExternalUpNext.Pending?>(null) }
+ 
+     LaunchedEffect(pending) {
+         val current = pending ?: run {
+@@ -104,15 +132,56 @@ internal fun ExternalUpNextOverlay(
+             countdown = null
+             return@LaunchedEffect
+         }
++        // Fork: after a few episodes in a row nobody touched, ask before playing on.
++        if (ExternalUpNext.shouldAskStillWatching(current.session.profileId)) {
++            countdown = null
++            ExternalUpNext.dismiss()
++            askStillWatching = current
++            return@LaunchedEffect
++        }
+         for (remaining in UP_NEXT_COUNTDOWN_SEC downTo 1) {
+             countdown = remaining
+             delay(1_000L)
+         }
+         countdown = null
+         ExternalUpNext.dismiss()
++        ExternalUpNext.noteAutoStart(current.next)
+         currentOnPlayNext(current.session, current.next)
+     }
+ 
++    askStillWatching?.let { target ->
++        androidx.compose.material3.AlertDialog(
++            onDismissRequest = {
++                askStillWatching = null
++                ExternalUpNext.resetStillWatching()
++            },
++            title = {
++                androidx.compose.material3.Text(
++                    "Are you still watching${target.session.title.takeIf { it.isNotBlank() }?.let { " $it" } ?: ""}?",
++                )
++            },
++            text = {
++                androidx.compose.material3.Text(
++                    "Up next: S${target.next.season} E${target.next.episode}" +
++                        (target.next.title.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""),
++                )
++            },
++            confirmButton = {
++                androidx.compose.material3.TextButton(onClick = {
++                    askStillWatching = null
++                    ExternalUpNext.resetStillWatching()
++                    currentOnPlayNext(target.session, target.next)
++                }) { androidx.compose.material3.Text("Continue Watching") }
++            },
++            dismissButton = {
++                androidx.compose.material3.TextButton(onClick = {
++                    askStillWatching = null
++                    ExternalUpNext.resetStillWatching()
++                }) { androidx.compose.material3.Text("Not Now") }
++            },
++        )
++    }
++
+     val current = pending
+     NextEpisodeCard(
+         nextEpisode = current?.next,
+@@ -124,6 +193,7 @@ internal fun ExternalUpNextOverlay(
+         onPlayNext = {
+             val target = ExternalUpNext.pending.value ?: return@NextEpisodeCard
+             ExternalUpNext.dismiss()
++            ExternalUpNext.resetStillWatching() // Fork: tapped by hand
+             if (target.next.hasAired) currentOnPlayNext(target.session, target.next)
+         },
+         onDismiss = ExternalUpNext::dismiss,
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/PlaybackSettingsPage.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/PlaybackSettingsPage.kt
+index 75de0c221..caa438afb 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/PlaybackSettingsPage.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/PlaybackSettingsPage.kt
+@@ -1397,6 +1397,24 @@ private fun PlaybackSettingsSection(
+                     isTablet = isTablet,
+                     onCheckedChange = PlayerSettingsRepository::setStreamAutoPlayNextEpisodeEnabled,
+                 )
++                // Fork: Netflix-style check-in for Up Next in Infuse.
++                run {
++                    val forkSwProfileState by com.nuvio.app.features.profiles.ProfileRepository.state
++                        .collectAsStateWithLifecycle()
++                    val forkSwIndex = forkSwProfileState.activeProfile?.profileIndex ?: 1
++                    val forkSwOff by remember {
++                        com.nuvio.app.features.home.ForkHomeSettings.ensureLoaded()
++                        com.nuvio.app.features.home.ForkHomeSettings.stillWatchingOffProfiles
++                    }.collectAsStateWithLifecycle()
++                    SettingsGroupDivider(isTablet = isTablet)
++                    SettingsSwitchRow(
++                        title = "Ask If Still Watching",
++                        description = "After 3 episodes in a row play to the end without being stopped, ask before starting the next one",
++                        checked = forkSwIndex !in forkSwOff,
++                        isTablet = isTablet,
++                        onCheckedChange = { com.nuvio.app.features.home.ForkHomeSettings.setStillWatching(forkSwIndex, it) },
++                    )
++                }
+                 if (autoPlayPlayerSettings.streamAutoPlayNextEpisodeEnabled &&
+                     autoPlayPlayerSettings.streamAutoPlayMode == StreamAutoPlayMode.MANUAL) {
+                     SettingsGroupDivider(isTablet = isTablet)
+diff --git a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt
+index 9fdd507bb..ada93234c 100644
+--- a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt
++++ b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt
+@@ -8,6 +8,7 @@ internal actual object ForkHomeSettingsStorage {
+     private const val whitePlayKey = "fork_white_play_button"
+     private const val kidsTrendingKey = "fork_kids_trending_profiles"
+     private const val kidsLimitKey = "fork_kids_limit_profiles"
++    private const val stillWatchingOffKey = "fork_still_watching_off_profiles"
+ 
+     actual fun loadBecauseRowsEnabled(): Boolean? {
+         val defaults = NSUserDefaults.standardUserDefaults
+@@ -36,6 +37,13 @@ internal actual object ForkHomeSettingsStorage {
+         NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = whitePlayKey)
+     }
+ 
++    actual fun loadStillWatchingOffProfiles(): String? =
++        NSUserDefaults.standardUserDefaults.stringForKey(stillWatchingOffKey)
++
++    actual fun saveStillWatchingOffProfiles(value: String) {
++        NSUserDefaults.standardUserDefaults.setObject(value, forKey = stillWatchingOffKey)
++    }
++
+     actual fun loadKidsLimitProfiles(): String? =
+         NSUserDefaults.standardUserDefaults.stringForKey(kidsLimitKey)
+ 
