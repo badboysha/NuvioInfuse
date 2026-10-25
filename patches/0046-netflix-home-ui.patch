@@ -619,7 +619,7 @@ index d24cb4223..7b8bb1380 100644
  private fun ArtworkPanel(
      imageUrl: String?,
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeHeroSection.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeHeroSection.kt
-index 14ef1d4a8..73109f3f0 100644
+index 14ef1d4a8..3957f7ac9 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeHeroSection.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeHeroSection.kt
 @@ -876,6 +876,25 @@ private fun HeroContentBlock(
@@ -639,7 +639,7 @@ index 14ef1d4a8..73109f3f0 100644
 +                modifier = Modifier.fillMaxWidth(),
 +                style = MaterialTheme.typography.bodyMedium,
 +                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.9f),
-+                textAlign = textAlign,
++                textAlign = if (layout.isTablet) TextAlign.Start else TextAlign.Center,
 +                maxLines = 1,
 +                overflow = TextOverflow.Ellipsis,
 +            )
@@ -649,14 +649,22 @@ index 14ef1d4a8..73109f3f0 100644
              Spacer(modifier = Modifier.height(10.dp))
              Text(
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomePosterCard.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomePosterCard.kt
-index 71e9511be..56da2eef0 100644
+index 71e9511be..46ff9fc11 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomePosterCard.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomePosterCard.kt
-@@ -45,6 +45,7 @@ fun HomePosterCard(
+@@ -6,6 +6,7 @@ import com.nuvio.app.core.format.formatReleaseDateForDisplay
+ import com.nuvio.app.core.ui.NuvioPosterCard
+ import com.nuvio.app.core.ui.NuvioPosterShape
+ import com.nuvio.app.core.ui.rememberPosterCardStyleUiState
++import com.nuvio.app.features.home.ForkCardBadgeOverlay
+ import com.nuvio.app.features.home.MetaPreview
+ import com.nuvio.app.features.home.PosterShape
+ 
+@@ -45,6 +46,7 @@ fun HomePosterCard(
          isWatched = isWatched,
          onClick = onClick,
          onLongClick = onLongClick,
-+        overlay = { com.nuvio.app.features.home.ForkCardBadgeOverlay(item = item, landscape = isLandscapeMode) },
++        overlay = { ForkCardBadgeOverlay(item = item, landscape = isLandscapeMode) },
      )
  }
  
