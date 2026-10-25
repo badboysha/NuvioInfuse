@@ -1,0 +1,292 @@
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
+index f12f6956e..0fa557146 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
+@@ -258,6 +258,19 @@ internal fun MainAppContent(
+                 onLocalPop = if (posterNavigationEnabled) posterNavigation::clear else null,
+             )
+         }
++        // Fork: a Kids studio tile (Disney+ look) opens that studio's titles.
++        androidx.compose.runtime.SideEffect {
++            com.nuvio.app.features.home.ForkDisneyKids.onOpenBrand = { kind, tmdbId, name ->
++                navController.navigate(
++                    EntityBrowseRoute(
++                        entityKind = kind,
++                        entityId = tmdbId,
++                        entityName = name,
++                        sourceType = if (kind == "network") "tv" else "movie",
++                    ),
++                )
++            }
++        }
+         val appUpdaterController = rememberAppUpdaterController()
+         if (ownsAppRuntime) {
+             remember {
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
+index 78eaf6776..3ac89e905 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
+@@ -47,6 +47,11 @@ object ForkHomeSettings {
+         _becauseRowsEnabled.value = ForkHomeSettingsStorage.loadBecauseRowsEnabled() ?: true
+         _trendingRowsEnabled.value = ForkHomeSettingsStorage.loadTrendingRowsEnabled() ?: true
+         _whitePlayButton.value = ForkHomeSettingsStorage.loadWhitePlayButton() ?: false
++        _disneyProfiles.value = ForkHomeSettingsStorage.loadForkString("fork_disney_profiles")
++            ?.split(',')
++            ?.mapNotNull { it.trim().toIntOrNull() }
++            ?.toSet()
++            ?: emptySet()
+         _netflixHome.value = ForkHomeSettingsStorage.loadForkString("fork_netflix_home")?.toBooleanStrictOrNull() ?: true
+         _cardBadges.value = ForkHomeSettingsStorage.loadForkString("fork_card_badges")?.toBooleanStrictOrNull() ?: true
+         _stillWatchingOffProfiles.value = ForkHomeSettingsStorage.loadStillWatchingOffProfiles()
+@@ -73,6 +78,17 @@ object ForkHomeSettings {
+     /** Fork: TOP 10 and New Episode / New Season / Recently Added tags on posters. */
+     val cardBadges: StateFlow<Boolean> = _cardBadges.asStateFlow()
+ 
++    private val _disneyProfiles = MutableStateFlow<Set<Int>>(emptySet())
++    /** Fork: profiles (by profile index) with the Disney+ look (navy theme, kids studio tiles). */
++    val disneyProfiles: StateFlow<Set<Int>> = _disneyProfiles.asStateFlow()
++
++    fun setDisneyStyle(profileIndex: Int, enabled: Boolean) {
++        ensureLoaded()
++        val updated = if (enabled) _disneyProfiles.value + profileIndex else _disneyProfiles.value - profileIndex
++        _disneyProfiles.value = updated
++        ForkHomeSettingsStorage.saveForkString("fork_disney_profiles", updated.sorted().joinToString(","))
++    }
++
+     fun setNetflixHome(enabled: Boolean) {
+         ensureLoaded()
+         _netflixHome.value = enabled
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkNetflixHome.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkNetflixHome.kt
+index b29182e73..0fced8647 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkNetflixHome.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkNetflixHome.kt
+@@ -187,3 +187,110 @@ internal fun ForkPlayCircle(size: Dp, modifier: Modifier = Modifier) {
+         )
+     }
+ }
++
++// MARK: Fork: Disney+ look for a Kids profile
++
++/** Navy theme and kids studio tiles (Disney, Pixar, DreamWorks, Illumination, Nickelodeon, Cartoon Network). */
++internal object ForkDisneyKids {
++    val Navy = Color(0xFF111833)
++    val NavySurface = Color(0xFF1A2244)
++    val NavySurfaceVariant = Color(0xFF232C52)
++    val Sky = Color(0xFF3FA0F5)
++
++    data class Brand(val tmdbId: Int, val name: String, val isNetwork: Boolean) {
++        val key get() = (if (isNetwork) "network-" else "company-") + tmdbId
++    }
++
++    val brands = listOf(
++        Brand(2, "Disney", false),
++        Brand(3, "Pixar", false),
++        Brand(521, "DreamWorks", false),
++        Brand(6704, "Illumination", false),
++        Brand(13, "Nickelodeon", true),
++        Brand(56, "Cartoon Network", true),
++    )
++
++    /** Set by the app root: opens the studio's titles (kind is "company" or "network"). */
++    var onOpenBrand: ((kind: String, tmdbId: Int, name: String) -> Unit)? = null
++
++    private val logosState = MutableStateFlow<Map<String, String>>(emptyMap())
++    val logos: StateFlow<Map<String, String>> = logosState.asStateFlow()
++    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
++    private var loading = false
++
++    fun loadLogosIfNeeded() {
++        if (loading || logosState.value.size == brands.size) return
++        loading = true
++        scope.launch {
++            brands.forEach { brand ->
++                if (brand.key in logosState.value) return@forEach
++                val url = runCatching { TmdbMetadataService.forkBrandLogo(brand.tmdbId, brand.isNetwork) }.getOrNull()
++                if (url != null) logosState.update { it + (brand.key to url) }
++            }
++            loading = false
++        }
++    }
++}
++
++@Composable
++internal fun ForkKidsBrandRow(horizontalPadding: Dp, modifier: Modifier = Modifier) {
++    val logos by ForkDisneyKids.logos.collectAsStateWithLifecycle()
++    LaunchedEffect(Unit) { ForkDisneyKids.loadLogosIfNeeded() }
++    androidx.compose.foundation.lazy.LazyRow(
++        modifier = modifier.fillMaxWidth().padding(vertical = 10.dp),
++        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = horizontalPadding),
++        horizontalArrangement = Arrangement.spacedBy(10.dp),
++    ) {
++        items(ForkDisneyKids.brands.size) { index ->
++            val brand = ForkDisneyKids.brands[index]
++            ForkKidsBrandTile(brand = brand, logoUrl = logos[brand.key])
++        }
++    }
++}
++
++@Composable
++private fun ForkKidsBrandTile(brand: ForkDisneyKids.Brand, logoUrl: String?) {
++    val shape = RoundedCornerShape(10.dp)
++    Box(
++        modifier = Modifier
++            .size(width = 128.dp, height = 72.dp)
++            .clip(shape)
++            .background(
++                androidx.compose.ui.graphics.Brush.verticalGradient(
++                    listOf(Color(0xFF30395F), Color(0xFF1A213D)),
++                ),
++            )
++            .border(1.dp, Color.White.copy(alpha = 0.18f), shape)
++            .clickable {
++                ForkDisneyKids.onOpenBrand?.invoke(
++                    if (brand.isNetwork) "network" else "company",
++                    brand.tmdbId,
++                    brand.name,
++                )
++            },
++        contentAlignment = Alignment.Center,
++    ) {
++        if (logoUrl != null) {
++            coil3.compose.AsyncImage(
++                model = logoUrl,
++                contentDescription = brand.name,
++                colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(
++                    Color.White,
++                    androidx.compose.ui.graphics.BlendMode.SrcIn,
++                ),
++                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
++                modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
++            )
++        } else {
++            Text(
++                text = brand.name,
++                color = Color.White,
++                fontWeight = FontWeight.Bold,
++                fontSize = 13.sp,
++                maxLines = 2,
++                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
++                modifier = Modifier.padding(horizontal = 8.dp),
++            )
++        }
++    }
++}
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
+index 29f46048e..db9d8616d 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
+@@ -1,5 +1,6 @@
+ package com.nuvio.app.features.home
+ 
++import androidx.compose.material3.MaterialTheme
+ import androidx.compose.animation.Crossfade
+ import androidx.compose.animation.core.tween
+ import androidx.compose.foundation.MutatePriority
+@@ -590,6 +591,12 @@ fun HomeScreen(
+     val shuffledContinueWatchingItems = remember(rawShuffledContinueWatchingItems, cwPosterPattern) {
+         rawShuffledContinueWatchingItems.withCustomPosterUrls(cwPosterPattern)
+     }
++    // Fork: Disney+ look for this profile (Kids).
++    val forkDisneyProfiles by remember {
++        ForkHomeSettings.ensureLoaded()
++        ForkHomeSettings.disneyProfiles
++    }.collectAsStateWithLifecycle()
++    val forkDisneyStyle = activeProfileId in forkDisneyProfiles
+     // Fork: Netflix Home — ⓘ on Continue Watching opens the details page.
+     androidx.compose.runtime.SideEffect { ForkNetflixHome.onCwInfo = onPosterClick }
+     val (continueWatchingItems, upcomingItems) = remember(
+@@ -1043,7 +1050,19 @@ fun HomeScreen(
+             { url -> activeHeroArtworkUrl = url }
+         }
+ 
+-        DynamicArtworkBackground(artworkUrl = activeHeroArtworkUrl) {
++        // Fork: Disney+ look — navy theme instead of the artwork wash.
++        val forkDisneyColors = if (forkDisneyStyle) {
++            MaterialTheme.colorScheme.copy(
++                background = ForkDisneyKids.Navy,
++                surface = ForkDisneyKids.NavySurface,
++                surfaceVariant = ForkDisneyKids.NavySurfaceVariant,
++                primary = ForkDisneyKids.Sky,
++            )
++        } else {
++            MaterialTheme.colorScheme
++        }
++        MaterialTheme(colorScheme = forkDisneyColors) {
++        DynamicArtworkBackground(artworkUrl = if (forkDisneyStyle) null else activeHeroArtworkUrl) {
+             NuvioScreen(
+                 modifier = Modifier.fillMaxSize().then(heroStretchModifier),
+                 horizontalPadding = 0.dp,
+@@ -1099,6 +1118,12 @@ fun HomeScreen(
+                     }
+                 }
+ 
++                if (forkDisneyStyle) {
++                    item(key = "fork_kids_brands") {
++                        ForkKidsBrandRow(horizontalPadding = homeSectionPadding)
++                    }
++                }
++
+                 when {
+                     isInitialHomeContentLoading -> {
+                         homeContinueWatchingSections(
+@@ -1291,6 +1316,7 @@ fun HomeScreen(
+                 }
+             }
+         }
++        }
+     }
+ }
+ 
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt
+index 0f141e6ab..7aaefdeeb 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt
+@@ -340,6 +340,19 @@ internal fun LazyListScope.homescreenSettingsContent(
+                             isTablet = isTablet,
+                             onCheckedChange = ForkHomeSettings::setNetflixHome,
+                         )
++                        // Fork: Disney+ look, per profile (for the Kids profile).
++                        val forkDisneyProfileState by com.nuvio.app.features.profiles.ProfileRepository.state
++                            .collectAsStateWithLifecycle()
++                        val forkDisneyIndex = forkDisneyProfileState.activeProfile?.profileIndex ?: 1
++                        val forkDisneyProfiles by ForkHomeSettings.disneyProfiles.collectAsStateWithLifecycle()
++                        SettingsGroupDivider(isTablet = isTablet)
++                        SettingsSwitchRow(
++                            title = "Disney+ Style",
++                            description = "For a Kids profile: Disney navy theme and Disney, Pixar, DreamWorks, Illumination, Nickelodeon and Cartoon Network tiles under the hero",
++                            checked = forkDisneyIndex in forkDisneyProfiles,
++                            isTablet = isTablet,
++                            onCheckedChange = { ForkHomeSettings.setDisneyStyle(forkDisneyIndex, it) },
++                        )
+                         SettingsGroupDivider(isTablet = isTablet)
+                         SettingsSwitchRow(
+                             title = "Card Tags",
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
+index e8a65db53..2fc02fcf9 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
+@@ -1272,6 +1272,12 @@ object TmdbMetadataService {
+      * beside it. Movies: "Recently Added" when the digital release was in the last 30 days.
+      * Returns null when TMDB can't be reached, (null, null) when there's nothing to tag.
+      */
++    /** Fork: a studio's or TV network's logo URL on TMDB (for the Kids brand tiles). */
++    suspend fun forkBrandLogo(tmdbId: Int, isNetwork: Boolean): String? {
++        val brand = fetch<ForkTmdbBrand>(endpoint = if (isNetwork) "network/$tmdbId" else "company/$tmdbId") ?: return null
++        return brand.logoPath?.takeIf { it.isNotBlank() }?.let { "https://image.tmdb.org/t/p/w500$it" }
++    }
++
+     suspend fun forkFreshness(id: String, type: String): Pair<String?, String?>? {
+         val mediaType = if (type.equals("series", true) || type.equals("tv", true)) "tv" else "movie"
+         val tmdbId = runCatching { TmdbService.ensureTmdbId(id, mediaType) }.getOrNull()
+@@ -2178,6 +2184,11 @@ private data class TmdbReleaseDate(
+     val certification: String? = null,
+ )
+ 
++@Serializable
++private data class ForkTmdbBrand(
++    @SerialName("logo_path") val logoPath: String? = null,
++)
++
+ @Serializable
+ private data class ForkTmdbShowAiring(
+     @SerialName("last_episode_to_air") val last: ForkTmdbAiringEpisode? = null,
