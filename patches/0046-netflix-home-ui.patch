@@ -1,0 +1,819 @@
+diff --git a/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt
+index 9f79ef8cb..e3b665ebc 100644
+--- a/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt
++++ b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt
+@@ -41,6 +41,12 @@ internal actual object ForkHomeSettingsStorage {
+ 
+     actual fun loadKidsTrendingProfiles(): String? = preferences?.getString(kidsTrendingKey, null)
+ 
++    actual fun loadForkString(key: String): String? = preferences?.getString(key, null)
++
++    actual fun saveForkString(key: String, value: String) {
++        preferences?.edit()?.putString(key, value)?.apply()
++    }
++
+     actual fun loadStillWatchingOffProfiles(): String? = preferences?.getString(stillWatchingOffKey, null)
+ 
+     actual fun saveStillWatchingOffProfiles(value: String) {
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/core/ui/ShelfComponents.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/core/ui/ShelfComponents.kt
+index deab5fb7b..3c5c14041 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/core/ui/ShelfComponents.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/core/ui/ShelfComponents.kt
+@@ -136,6 +136,8 @@ fun NuvioPosterCard(
+     isWatched: Boolean = false,
+     onClick: (() -> Unit)? = null,
+     onLongClick: (() -> Unit)? = null,
++    // Fork: extra content drawn over the artwork (Netflix TOP 10 / New Episode tags).
++    overlay: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit = {},
+ ) {
+     val posterCardStyle = rememberPosterCardStyleUiState()
+     val tokens = MaterialTheme.nuvio
+@@ -247,6 +249,7 @@ fun NuvioPosterCard(
+             }
+ 
+             NuvioPosterWatchedOverlay(isWatched = isWatched)
++            overlay()
+         }
+         if (shouldShowTitleBelow) {
+             Text(
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
+index e2db09a50..78eaf6776 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
+@@ -16,6 +16,8 @@ internal expect object ForkHomeSettingsStorage {
+     fun loadKidsLimitProfiles(): String?
+     fun saveKidsLimitProfiles(value: String)
+     fun loadStillWatchingOffProfiles(): String?
++    fun loadForkString(key: String): String?
++    fun saveForkString(key: String, value: String)
+     fun saveStillWatchingOffProfiles(value: String)
+ }
+ 
+@@ -45,6 +47,8 @@ object ForkHomeSettings {
+         _becauseRowsEnabled.value = ForkHomeSettingsStorage.loadBecauseRowsEnabled() ?: true
+         _trendingRowsEnabled.value = ForkHomeSettingsStorage.loadTrendingRowsEnabled() ?: true
+         _whitePlayButton.value = ForkHomeSettingsStorage.loadWhitePlayButton() ?: false
++        _netflixHome.value = ForkHomeSettingsStorage.loadForkString("fork_netflix_home")?.toBooleanStrictOrNull() ?: true
++        _cardBadges.value = ForkHomeSettingsStorage.loadForkString("fork_card_badges")?.toBooleanStrictOrNull() ?: true
+         _stillWatchingOffProfiles.value = ForkHomeSettingsStorage.loadStillWatchingOffProfiles()
+             ?.split(',')
+             ?.mapNotNull { it.trim().toIntOrNull() }
+@@ -62,6 +66,25 @@ object ForkHomeSettings {
+             ?: emptySet()
+     }
+ 
++    private val _netflixHome = MutableStateFlow(true)
++    /** Fork: Netflix Home — Shows / Movies switch, genre line, "Continue Watching for <name>". */
++    val netflixHome: StateFlow<Boolean> = _netflixHome.asStateFlow()
++    private val _cardBadges = MutableStateFlow(true)
++    /** Fork: TOP 10 and New Episode / New Season / Recently Added tags on posters. */
++    val cardBadges: StateFlow<Boolean> = _cardBadges.asStateFlow()
++
++    fun setNetflixHome(enabled: Boolean) {
++        ensureLoaded()
++        _netflixHome.value = enabled
++        ForkHomeSettingsStorage.saveForkString("fork_netflix_home", enabled.toString())
++    }
++
++    fun setCardBadges(enabled: Boolean) {
++        ensureLoaded()
++        _cardBadges.value = enabled
++        ForkHomeSettingsStorage.saveForkString("fork_card_badges", enabled.toString())
++    }
++
+     fun setStillWatching(profileIndex: Int, enabled: Boolean) {
+         ensureLoaded()
+         val updated = if (enabled) _stillWatchingOffProfiles.value - profileIndex
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkNetflixHome.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkNetflixHome.kt
+new file mode 100644
+index 000000000..84e2f08fc
+--- /dev/null
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkNetflixHome.kt
+@@ -0,0 +1,238 @@
++package com.nuvio.app.features.home
++
++import androidx.compose.foundation.background
++import androidx.compose.foundation.border
++import androidx.compose.foundation.clickable
++import androidx.compose.foundation.layout.Arrangement
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.BoxScope
++import androidx.compose.foundation.layout.Column
++import androidx.compose.foundation.layout.Row
++import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.layout.size
++import androidx.compose.foundation.shape.CircleShape
++import androidx.compose.foundation.shape.RoundedCornerShape
++import androidx.compose.material.icons.Icons
++import androidx.compose.material.icons.rounded.PlayArrow
++import androidx.compose.material3.Icon
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.Text
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.LaunchedEffect
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.remember
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.draw.clip
++import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.text.font.FontWeight
++import androidx.compose.ui.unit.Dp
++import androidx.compose.ui.unit.dp
++import androidx.compose.ui.unit.sp
++import androidx.lifecycle.compose.collectAsStateWithLifecycle
++import com.nuvio.app.features.tmdb.TmdbMetadataService
++import com.nuvio.app.features.watchprogress.ContinueWatchingItem
++import kotlinx.coroutines.CoroutineScope
++import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.SupervisorJob
++import kotlinx.coroutines.flow.MutableStateFlow
++import kotlinx.coroutines.flow.StateFlow
++import kotlinx.coroutines.flow.asStateFlow
++import kotlinx.coroutines.flow.update
++import kotlinx.coroutines.launch
++import kotlinx.coroutines.sync.Mutex
++import kotlinx.coroutines.sync.Semaphore
++import kotlinx.coroutines.sync.withLock
++import kotlinx.coroutines.sync.withPermit
++import kotlin.time.Clock
++
++/** Fork: Netflix home touches shared by Home, the hero and Continue Watching. */
++internal object ForkNetflixHome {
++    val NetflixRed = Color(0xFFE50914)
++
++    /** Home's poster tap, so a Continue Watching card's ⓘ can open the details page. */
++    var onCwInfo: ((MetaPreview) -> Unit)? = null
++
++    fun infoPreview(item: ContinueWatchingItem) = MetaPreview(
++        id = item.parentMetaId,
++        type = item.parentMetaType,
++        name = item.title,
++        poster = item.poster,
++        banner = item.background,
++        logo = item.logo,
++    )
++}
++
++/** Fork: Netflix's Shows / Movies switch. */
++internal enum class ForkHomeTypeFilter(val label: String) {
++    All("Home"), Shows("Shows"), Movies("Movies");
++
++    fun matchesType(type: String): Boolean = when (this) {
++        All -> true
++        Shows -> type.equals("series", true) || type.equals("tv", true) || type.equals("show", true)
++        Movies -> type.equals("movie", true)
++    }
++}
++
++internal fun List<HomeCatalogSection>.forkType(filter: ForkHomeTypeFilter): List<HomeCatalogSection> =
++    if (filter == ForkHomeTypeFilter.All) this
++    else mapNotNull { section ->
++        val items = section.items.filter { filter.matchesType(it.type) }
++        if (items.isEmpty()) null else section.copy(items = items, availableItemCount = items.size)
++    }
++
++@Composable
++internal fun ForkHomeTypeChips(
++    selection: ForkHomeTypeFilter,
++    onSelect: (ForkHomeTypeFilter) -> Unit,
++    modifier: Modifier = Modifier,
++) {
++    Row(
++        modifier = modifier.fillMaxWidth(),
++        horizontalArrangement = Arrangement.spacedBy(8.dp),
++        verticalAlignment = Alignment.CenterVertically,
++    ) {
++        ForkHomeTypeFilter.entries.forEach { filter ->
++            val selected = filter == selection
++            Text(
++                text = filter.label,
++                style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp),
++                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
++                color = if (selected) Color.Black else MaterialTheme.colorScheme.onBackground,
++                modifier = Modifier
++                    .clip(RoundedCornerShape(50))
++                    .then(
++                        if (selected) Modifier.background(Color.White)
++                        else Modifier.border(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f), RoundedCornerShape(50))
++                    )
++                    .clickable { onSelect(filter) }
++                    .padding(horizontal = 16.dp, vertical = 7.dp),
++            )
++        }
++    }
++}
++
++/**
++ * Fork: per-title freshness tags from TMDB, looked up a few at a time and kept for 12 hours.
++ */
++internal object ForkCardBadges {
++    data class Entry(val primary: String?, val secondary: String?, val atMs: Long)
++
++    private const val TTL_MS = 12 * 60 * 60 * 1000L
++    private val entriesState = MutableStateFlow<Map<String, Entry>>(emptyMap())
++    val entries: StateFlow<Map<String, Entry>> = entriesState.asStateFlow()
++
++    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
++    private val limiter = Semaphore(4)
++    private val inFlightMutex = Mutex()
++    private val inFlight = mutableSetOf<String>()
++
++    private fun key(item: MetaPreview) = item.stableKey()
++
++    fun request(item: MetaPreview) {
++        val now = Clock.System.now().toEpochMilliseconds()
++        val cached = entriesState.value[key(item)]
++        if (cached != null && now - cached.atMs < TTL_MS) return
++        scope.launch {
++            val fresh = inFlightMutex.withLock { inFlight.add(key(item)) }
++            if (!fresh) return@launch
++            val result = limiter.withPermit {
++                runCatching { TmdbMetadataService.forkFreshness(item.id, item.type) }.getOrNull()
++            }
++            val at = Clock.System.now().toEpochMilliseconds()
++            entriesState.update { it + (key(item) to Entry(result?.first, result?.second, at)) }
++            inFlightMutex.withLock { inFlight.remove(key(item)) }
++        }
++    }
++}
++
++/** Fork: Netflix TOP 10 tag and New Episode / New Season / Recently Added tag over a poster. */
++@Composable
++internal fun BoxScope.ForkCardBadgeOverlay(item: MetaPreview, landscape: Boolean) {
++    val enabled by remember {
++        ForkHomeSettings.ensureLoaded()
++        ForkHomeSettings.cardBadges
++    }.collectAsStateWithLifecycle()
++    if (!enabled) return
++    val entries by ForkCardBadges.entries.collectAsStateWithLifecycle()
++    LaunchedEffect(item.stableKey()) { ForkCardBadges.request(item) }
++    val entry = entries[item.stableKey()]
++    // Cheap (ten items), and the Top 10 rows may load after the card first draws.
++    val isTop10 = ForkHomeRows.top10Rank(item.id, item.name, item.type, item.releaseInfo) != null
++
++    if (isTop10) {
++        ForkTop10Tag(Modifier.align(Alignment.TopEnd).padding(5.dp))
++    }
++    entry?.primary?.let { primary ->
++        ForkFreshPill(
++            primary = primary,
++            secondary = entry.secondary,
++            modifier = if (landscape) {
++                Modifier.align(Alignment.TopStart).padding(6.dp)
++            } else {
++                Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp)
++            },
++        )
++    }
++}
++
++@Composable
++internal fun ForkTop10Tag(modifier: Modifier = Modifier) {
++    Column(
++        modifier = modifier
++            .clip(RoundedCornerShape(2.dp))
++            .background(ForkNetflixHome.NetflixRed)
++            .padding(horizontal = 4.dp, vertical = 2.dp),
++        horizontalAlignment = Alignment.CenterHorizontally,
++    ) {
++        Text("TOP", color = Color.White, fontSize = 6.sp, lineHeight = 7.sp, fontWeight = FontWeight.Black)
++        Text("10", color = Color.White, fontSize = 11.sp, lineHeight = 11.sp, fontWeight = FontWeight.Black)
++    }
++}
++
++@Composable
++internal fun ForkFreshPill(primary: String, secondary: String?, modifier: Modifier = Modifier) {
++    Row(modifier = modifier.clip(RoundedCornerShape(2.dp))) {
++        Text(
++            text = primary,
++            color = Color.White,
++            fontSize = 9.sp,
++            lineHeight = 11.sp,
++            fontWeight = FontWeight.Bold,
++            maxLines = 1,
++            modifier = Modifier.background(ForkNetflixHome.NetflixRed).padding(horizontal = 5.dp, vertical = 2.dp),
++        )
++        if (secondary != null) {
++            Text(
++                text = secondary,
++                color = Color.Black,
++                fontSize = 9.sp,
++                lineHeight = 11.sp,
++                fontWeight = FontWeight.Bold,
++                maxLines = 1,
++                modifier = Modifier.background(Color.White).padding(horizontal = 5.dp, vertical = 2.dp),
++            )
++        }
++    }
++}
++
++/** Fork: Netflix's round play button over a Continue Watching card. */
++@Composable
++internal fun ForkPlayCircle(size: Dp, modifier: Modifier = Modifier) {
++    Box(
++        modifier = modifier
++            .size(size)
++            .clip(CircleShape)
++            .background(Color.Black.copy(alpha = 0.35f))
++            .border(2.dp, Color.White, CircleShape),
++        contentAlignment = Alignment.Center,
++    ) {
++        Icon(
++            imageVector = Icons.Rounded.PlayArrow,
++            contentDescription = null,
++            tint = Color.White,
++            modifier = Modifier.size(size * 0.6f),
++        )
++    }
++}
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
+index ded95c684..2f5194823 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
+@@ -587,12 +587,21 @@ fun HomeScreen(
+     val shuffledContinueWatchingItems = remember(rawShuffledContinueWatchingItems, cwPosterPattern) {
+         rawShuffledContinueWatchingItems.withCustomPosterUrls(cwPosterPattern)
+     }
++    // Fork: Netflix Home — Shows / Movies switch (session only) and ⓘ on Continue Watching.
++    val forkNetflixHome by remember {
++        ForkHomeSettings.ensureLoaded()
++        ForkHomeSettings.netflixHome
++    }.collectAsStateWithLifecycle()
++    var forkTypeFilterName by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(ForkHomeTypeFilter.All.name) }
++    val forkTypeFilter = if (forkNetflixHome) ForkHomeTypeFilter.valueOf(forkTypeFilterName) else ForkHomeTypeFilter.All
++    androidx.compose.runtime.SideEffect { ForkNetflixHome.onCwInfo = onPosterClick }
+     val (continueWatchingItems, upcomingItems) = remember(
+         shuffledContinueWatchingItems,
+         continueWatchingPreferences.sortMode,
++        forkTypeFilter,
+     ) {
+         splitUpcomingItems(
+-            items = shuffledContinueWatchingItems,
++            items = shuffledContinueWatchingItems.filter { forkTypeFilter.matchesType(it.parentMetaType) },
+             mode = continueWatchingPreferences.sortMode,
+         )
+     }
+@@ -940,8 +949,11 @@ fun HomeScreen(
+         visibleCollections.associateBy { "collection_${it.id}" }
+     }
+     val forkKidsFilter = rememberForkKidsFilter() // Fork: kids rating limit
+-    val sectionsMap = remember(homeUiState.sections, forkKidsFilter) {
+-        homeUiState.sections.forkKids(forkKidsFilter).associateBy(HomeCatalogSection::key)
++    val sectionsMap = remember(homeUiState.sections, forkKidsFilter, forkTypeFilter) {
++        homeUiState.sections.forkKids(forkKidsFilter).forkType(forkTypeFilter).associateBy(HomeCatalogSection::key)
++    }
++    val forkHeroItems = remember(homeUiState.heroItems, forkTypeFilter) {
++        homeUiState.heroItems.filter { forkTypeFilter.matchesType(it.type) }.ifEmpty { homeUiState.heroItems }
+     }
+     val enabledHomeItems = remember(homeSettingsUiState.items) {
+         homeSettingsUiState.items.filter { it.enabled }
+@@ -1057,7 +1069,7 @@ fun HomeScreen(
+                             )
+ 
+                             homeUiState.heroItems.isNotEmpty() -> HomeHeroSection(
+-                                items = homeUiState.heroItems,
++                                items = forkHeroItems,
+                                 modifier = Modifier,
+                                 viewportHeight = maxHeight,
+                                 mobileBelowSectionHeightHint = mobileHeroBelowSectionHeightHint,
+@@ -1085,6 +1097,16 @@ fun HomeScreen(
+                     }
+                 }
+ 
++                if (forkNetflixHome) {
++                    item(key = "fork_type_chips") {
++                        ForkHomeTypeChips(
++                            selection = forkTypeFilter,
++                            onSelect = { forkTypeFilterName = it.name },
++                            modifier = Modifier.padding(horizontal = homeSectionPadding, vertical = 8.dp),
++                        )
++                    }
++                }
++
+                 when {
+                     isInitialHomeContentLoading -> {
+                         homeContinueWatchingSections(
+@@ -1219,7 +1241,7 @@ fun HomeScreen(
+                         val forkRowsInOrder = listOfNotNull(forkTrendingRows?.topShows) +
+                             forkRows +
+                             listOfNotNull(forkTrendingRows?.topMovies) // Fork: no Trending Now row (Trending / New covers it)
+-                        val forkVisibleRows = forkRowsInOrder.forkKids(forkKidsFilter)
++                        val forkVisibleRows = forkRowsInOrder.forkKids(forkKidsFilter).forkType(forkTypeFilter)
+                         forkVisibleRows.forEach { section ->
+                             item(key = section.key, contentType = "catalog") {
+                                 HomeCatalogRowSection(
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeContinueWatchingSection.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeContinueWatchingSection.kt
+index d24cb4223..7b8bb1380 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeContinueWatchingSection.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeContinueWatchingSection.kt
+@@ -1,5 +1,10 @@
+ package com.nuvio.app.features.home.components
+ 
++import androidx.lifecycle.compose.collectAsStateWithLifecycle
++import androidx.compose.foundation.shape.CircleShape
++import androidx.compose.foundation.clickable
++import androidx.compose.material.icons.rounded.MoreVert
++import androidx.compose.material.icons.outlined.Info
+ import androidx.compose.foundation.ExperimentalFoundationApi
+ import androidx.compose.foundation.background
+ import androidx.compose.foundation.border
+@@ -364,8 +369,20 @@ private fun HomeContinueWatchingSectionContent(
+             )
+         }
+ 
++        // Fork: Netflix Home — "Continue Watching for <name>" and Netflix-style cards.
++        val forkNetflixHome by remember {
++            com.nuvio.app.features.home.ForkHomeSettings.ensureLoaded()
++            com.nuvio.app.features.home.ForkHomeSettings.netflixHome
++        }.collectAsStateWithLifecycle()
++        val forkProfileState by com.nuvio.app.features.profiles.ProfileRepository.state.collectAsStateWithLifecycle()
++        val forkProfileName = forkProfileState.activeProfile?.name?.trim()?.takeIf { it.isNotEmpty() }
++        val defaultTitle = stringResource(Res.string.compose_settings_page_continue_watching)
+         NuvioShelfSection(
+-            title = title ?: stringResource(Res.string.compose_settings_page_continue_watching),
++            title = title ?: if (forkNetflixHome && forkProfileName != null) {
++                "Continue Watching for $forkProfileName"
++            } else {
++                defaultTitle
++            },
+             entries = displayEntries,
+             modifier = modifier,
+             headerHorizontalPadding = sectionPadding,
+@@ -382,7 +399,16 @@ private fun HomeContinueWatchingSectionContent(
+                 disintegrating = entry.exiting,
+                 onDisintegrated = { disintegration.onDisintegrated(entry.key) },
+             ) {
+-                when (style) {
++                if (forkNetflixHome) {
++                    ForkNetflixContinueCard(
++                        item = item,
++                        layout = layout,
++                        useEpisodeThumbnails = useEpisodeThumbnails,
++                        blurNextUp = blurNextUp,
++                        onClick = onClick,
++                        onLongClick = onLongClick,
++                    )
++                } else when (style) {
+                     ContinueWatchingSectionStyle.Card -> ContinueWatchingCard(
+                         item = item,
+                         useEpisodeThumbnails = useEpisodeThumbnails,
+@@ -1175,6 +1201,157 @@ private fun ContinueWatchingPosterCard(
+     }
+ }
+ 
++/**
++ * Fork: Netflix's Continue Watching card — poster with a round play button, "S3:E24" over a red
++ * progress bar at the bottom edge, and ⓘ (details) and ⋮ (more) under it.
++ */
++@Composable
++private fun ForkNetflixContinueCard(
++    item: ContinueWatchingItem,
++    layout: ContinueWatchingLayout,
++    useEpisodeThumbnails: Boolean,
++    blurNextUp: Boolean,
++    onClick: (() -> Unit)?,
++    onLongClick: (() -> Unit)?,
++) {
++    val cornerRadius = rememberPosterCardStyleUiState().cornerRadiusDp.dp
++    val imageUrl = item.continueWatchingPosterArtworkUrl(false)
++    val shape = RoundedCornerShape(cornerRadius)
++    Column(
++        modifier = Modifier
++            .width(layout.posterCardWidth)
++            .clip(shape)
++            .background(MaterialTheme.colorScheme.surfaceVariant),
++    ) {
++        Box(
++            modifier = Modifier
++                .fillMaxWidth()
++                .height(layout.posterCardHeight)
++                .posterCardClickable(
++                    onClick = onClick,
++                    onLongClick = onLongClick,
++                    zoomImageUrl = imageUrl,
++                    zoomCornerRadius = cornerRadius,
++                ),
++        ) {
++            if (imageUrl != null) {
++                AsyncImage(
++                    model = continuewatchingImageModel(
++                        imageUrl = cloudLibraryDisplayArtworkUrl(imageUrl),
++                        fallbackUrl = item.fallbackUrlForArtwork(imageUrl),
++                    ),
++                    contentDescription = item.title,
++                    modifier = Modifier.fillMaxSize(),
++                    contentScale = if (item.isCloudLibraryItem()) ContentScale.Fit else ContentScale.Crop,
++                )
++            }
++            // Gentle scrim so the label and button read over bright art.
++            Box(
++                modifier = Modifier
++                    .matchParentSize()
++                    .background(
++                        androidx.compose.ui.graphics.Brush.verticalGradient(
++                            0.55f to Color.Transparent,
++                            1f to Color.Black.copy(alpha = 0.7f),
++                        ),
++                    ),
++            )
++            val upcoming = item.progressFraction <= 0f && !item.isReleaseAlert &&
++                computeAirDateBadgeText(item.released, CurrentDateProvider.todayIsoDate()) != null
++            if (!upcoming) {
++                com.nuvio.app.features.home.ForkPlayCircle(
++                    size = (layout.posterCardWidth * 0.42f),
++                    modifier = Modifier.align(Alignment.Center),
++                )
++            }
++            if (item.isReleaseAlert || upcoming) {
++                val badge = when {
++                    item.isNewSeasonRelease -> stringResource(Res.string.cw_new_season)
++                    item.isReleaseAlert -> stringResource(Res.string.cw_new_episode)
++                    else -> computeAirDateBadgeText(item.released, CurrentDateProvider.todayIsoDate()).orEmpty()
++                }
++                Text(
++                    text = badge,
++                    color = Color.White,
++                    fontSize = 9.sp,
++                    fontWeight = FontWeight.Bold,
++                    maxLines = 1,
++                    modifier = Modifier
++                        .align(Alignment.TopCenter)
++                        .padding(top = 6.dp)
++                        .clip(RoundedCornerShape(2.dp))
++                        .background(com.nuvio.app.features.home.ForkNetflixHome.NetflixRed)
++                        .padding(horizontal = 5.dp, vertical = 2.dp),
++                )
++            }
++            val label = if (item.seasonNumber != null && item.episodeNumber != null) {
++                "S${item.seasonNumber}:E${item.episodeNumber}"
++            } else {
++                null
++            }
++            if (label != null) {
++                Text(
++                    text = label,
++                    color = Color.White,
++                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
++                    modifier = Modifier
++                        .align(Alignment.BottomCenter)
++                        .padding(bottom = 8.dp),
++                )
++            }
++            if (item.progressFraction > 0f) {
++                Box(
++                    modifier = Modifier
++                        .align(Alignment.BottomStart)
++                        .fillMaxWidth()
++                        .height(3.dp)
++                        .background(Color.White.copy(alpha = 0.3f)),
++                ) {
++                    Box(
++                        modifier = Modifier
++                            .fillMaxHeight()
++                            .fillMaxWidth(item.progressFraction.coerceIn(0f, 1f))
++                            .background(com.nuvio.app.features.home.ForkNetflixHome.NetflixRed),
++                    )
++                }
++            }
++        }
++        Row(
++            modifier = Modifier
++                .fillMaxWidth()
++                .height(34.dp)
++                .padding(horizontal = 6.dp),
++            horizontalArrangement = Arrangement.SpaceBetween,
++            verticalAlignment = Alignment.CenterVertically,
++        ) {
++            Icon(
++                imageVector = androidx.compose.material.icons.Icons.Outlined.Info,
++                contentDescription = "Details",
++                tint = MaterialTheme.colorScheme.onSurfaceVariant,
++                modifier = Modifier
++                    .size(28.dp)
++                    .clip(CircleShape)
++                    .clickable {
++                        val open = com.nuvio.app.features.home.ForkNetflixHome.onCwInfo
++                        if (open != null) open(com.nuvio.app.features.home.ForkNetflixHome.infoPreview(item))
++                        else onLongClick?.invoke()
++                    }
++                    .padding(4.dp),
++            )
++            Icon(
++                imageVector = androidx.compose.material.icons.Icons.Rounded.MoreVert,
++                contentDescription = "More",
++                tint = MaterialTheme.colorScheme.onSurfaceVariant,
++                modifier = Modifier
++                    .size(28.dp)
++                    .clip(CircleShape)
++                    .clickable { onLongClick?.invoke() }
++                    .padding(4.dp),
++            )
++        }
++    }
++}
++
+ @Composable
+ private fun ArtworkPanel(
+     imageUrl: String?,
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeHeroSection.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeHeroSection.kt
+index 39e034069..5f379bb34 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeHeroSection.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeHeroSection.kt
+@@ -889,6 +889,25 @@ private fun HeroContentBlock(
+             HeroTypePill(text = typeLabel)
+         }
+ 
++        // Fork: Netflix Home — "Crime  •  Drama  •  Thriller" line under the details.
++        val forkNetflixHome by remember {
++            com.nuvio.app.features.home.ForkHomeSettings.ensureLoaded()
++            com.nuvio.app.features.home.ForkHomeSettings.netflixHome
++        }.collectAsStateWithLifecycle()
++        val forkGenres = item.genres.ifEmpty { details?.genres.orEmpty() }.filter { it.isNotBlank() }
++        if (forkNetflixHome && forkGenres.size > 1) {
++            Spacer(modifier = Modifier.height(8.dp))
++            Text(
++                text = forkGenres.take(5).joinToString("  •  "),
++                modifier = Modifier.fillMaxWidth(),
++                style = MaterialTheme.typography.bodyMedium,
++                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.9f),
++                textAlign = textAlign,
++                maxLines = 1,
++                overflow = TextOverflow.Ellipsis,
++            )
++        }
++
+         if (synopsis != null) {
+             Spacer(modifier = Modifier.height(10.dp))
+             Text(
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomePosterCard.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomePosterCard.kt
+index 71e9511be..56da2eef0 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomePosterCard.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomePosterCard.kt
+@@ -45,6 +45,7 @@ fun HomePosterCard(
+         isWatched = isWatched,
+         onClick = onClick,
+         onLongClick = onLongClick,
++        overlay = { com.nuvio.app.features.home.ForkCardBadgeOverlay(item = item, landscape = isLandscapeMode) },
+     )
+ }
+ 
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt
+index 032c9d0b4..bf0a1dc82 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt
+@@ -325,6 +325,30 @@ internal fun LazyListScope.homescreenSettingsContent(
+                             onCheckedChange = { ForkHomeSettings.setKidsLimit(forkLimitIndex, it) },
+                         )
+                     }
++                    // Fork: Netflix Home and card tags.
++                    run {
++                        val forkNetflixHome by remember {
++                            ForkHomeSettings.ensureLoaded()
++                            ForkHomeSettings.netflixHome
++                        }.collectAsStateWithLifecycle()
++                        val forkCardBadges by ForkHomeSettings.cardBadges.collectAsStateWithLifecycle()
++                        SettingsGroupDivider(isTablet = isTablet)
++                        SettingsSwitchRow(
++                            title = "Netflix Home",
++                            description = "Home / Shows / Movies switch, genre line on the hero, and \"Continue Watching for\" your name with Netflix-style cards",
++                            checked = forkNetflixHome,
++                            isTablet = isTablet,
++                            onCheckedChange = ForkHomeSettings::setNetflixHome,
++                        )
++                        SettingsGroupDivider(isTablet = isTablet)
++                        SettingsSwitchRow(
++                            title = "Card Tags",
++                            description = "Netflix TOP 10 tags and New Episode / New Season / Recently Added tags on posters (from TMDB)",
++                            checked = forkCardBadges,
++                            isTablet = isTablet,
++                            onCheckedChange = ForkHomeSettings::setCardBadges,
++                        )
++                    }
+                 }
+                 androidx.compose.foundation.layout.Spacer(
+                     Modifier.padding(top = if (isTablet) 16.dp else 12.dp),
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
+index 801bb5ac1..e8a65db53 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
+@@ -1,5 +1,7 @@
+ package com.nuvio.app.features.tmdb
+ 
++import kotlinx.datetime.daysUntil
++import kotlinx.datetime.toLocalDateTime
+ import co.touchlab.kermit.Logger
+ import com.nuvio.app.features.addons.httpGetText
+ import com.nuvio.app.features.details.MetaCompany
+@@ -1264,6 +1266,56 @@ object TmdbMetadataService {
+      * Fork: kids rating limit — a title's age rating (US first) for any Nuvio id (tt… / tmdb:…),
+      * or null when TMDB has none or the title can't be matched.
+      */
++    /**
++     * Fork: Netflix card tag. Series: "New Episode" / "New Season" when an episode aired in the
++     * last 10 days (or a new season starts within the week), with "Watch Now" or the next air day
++     * beside it. Movies: "Recently Added" when the digital release was in the last 30 days.
++     * Returns null when TMDB can't be reached, (null, null) when there's nothing to tag.
++     */
++    suspend fun forkFreshness(id: String, type: String): Pair<String?, String?>? {
++        val mediaType = if (type.equals("series", true) || type.equals("tv", true)) "tv" else "movie"
++        val tmdbId = runCatching { TmdbService.ensureTmdbId(id, mediaType) }.getOrNull()
++            ?.toIntOrNull() ?: return null
++        val today = kotlin.time.Clock.System.now()
++            .toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault()).date
++        fun day(raw: String?): kotlinx.datetime.LocalDate? =
++            raw?.takeIf { it.length >= 10 }?.let { runCatching { kotlinx.datetime.LocalDate.parse(it.substring(0, 10)) }.getOrNull() }
++        if (mediaType == "tv") {
++            val show = fetch<ForkTmdbShowAiring>(endpoint = "tv/$tmdbId") ?: return null
++            var primary: String? = null
++            var secondary: String? = null
++            show.last?.let { last ->
++                val aired = day(last.airDate) ?: return@let
++                val daysAgo = aired.daysUntil(today)
++                if (daysAgo in 0..10) {
++                    primary = if (last.episode == 1 && (last.season ?: 1) > 1) "New Season" else "New Episode"
++                }
++            }
++            show.next?.let { next ->
++                val airs = day(next.airDate) ?: return@let
++                val daysAhead = today.daysUntil(airs)
++                if (daysAhead in 0..6) {
++                    if (primary == null && next.episode == 1 && (next.season ?: 1) > 1) primary = "New Season"
++                    if (primary != null) {
++                        secondary = if (daysAhead == 0) "Today"
++                        else airs.dayOfWeek.name.lowercase().replaceFirstChar(Char::uppercase)
++                    }
++                }
++            }
++            if (primary != null && secondary == null) secondary = "Watch Now"
++            return primary to secondary
++        }
++        val releases = fetch<ForkTmdbReleases>(endpoint = "movie/$tmdbId/release_dates") ?: return null
++        // Digital (4) or physical (5): when it became watchable at home.
++        val homeRelease = releases.results
++            .flatMap { it.releaseDates }
++            .filter { (it.type ?: 0) >= 4 }
++            .mapNotNull { day(it.releaseDate) }
++            .minOrNull()
++        if (homeRelease != null && homeRelease.daysUntil(today) in 0..30) return "Recently Added" to null
++        return null to null
++    }
++
+     suspend fun forkAgeRating(id: String, type: String): String? {
+         val mediaType = if (type.equals("series", true) || type.equals("tv", true)) "tv" else "movie"
+         val tmdbId = runCatching { TmdbService.ensureTmdbId(id, mediaType) }.getOrNull()
+@@ -2126,6 +2178,35 @@ private data class TmdbReleaseDate(
+     val certification: String? = null,
+ )
+ 
++@Serializable
++private data class ForkTmdbShowAiring(
++    @SerialName("last_episode_to_air") val last: ForkTmdbAiringEpisode? = null,
++    @SerialName("next_episode_to_air") val next: ForkTmdbAiringEpisode? = null,
++)
++
++@Serializable
++private data class ForkTmdbAiringEpisode(
++    @SerialName("air_date") val airDate: String? = null,
++    @SerialName("episode_number") val episode: Int? = null,
++    @SerialName("season_number") val season: Int? = null,
++)
++
++@Serializable
++private data class ForkTmdbReleases(
++    val results: List<ForkTmdbReleaseCountry> = emptyList(),
++)
++
++@Serializable
++private data class ForkTmdbReleaseCountry(
++    @SerialName("release_dates") val releaseDates: List<ForkTmdbReleaseDate> = emptyList(),
++)
++
++@Serializable
++private data class ForkTmdbReleaseDate(
++    val type: Int? = null,
++    @SerialName("release_date") val releaseDate: String? = null,
++)
++
+ @Serializable
+ private data class TmdbTvContentRatingsResponse(
+     val results: List<TmdbTvContentRating> = emptyList(),
+diff --git a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt
+index ada93234c..16ee6aab8 100644
+--- a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt
++++ b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt
+@@ -37,6 +37,13 @@ internal actual object ForkHomeSettingsStorage {
+         NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = whitePlayKey)
+     }
+ 
++    actual fun loadForkString(key: String): String? =
++        NSUserDefaults.standardUserDefaults.stringForKey(key)
++
++    actual fun saveForkString(key: String, value: String) {
++        NSUserDefaults.standardUserDefaults.setObject(value, forKey = key)
++    }
++
+     actual fun loadStillWatchingOffProfiles(): String? =
+         NSUserDefaults.standardUserDefaults.stringForKey(stillWatchingOffKey)
+ 
