@@ -62,10 +62,10 @@ index 4ade5f022..ab9053651 100644
      if (uiState.isLoading && sections.isEmpty()) {
          LoadingIndicator()
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/MetaDetailsScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/MetaDetailsScreen.kt
-index 45a52b701..51d77dfd8 100644
+index 73fcba6eb..e7c4aead6 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/MetaDetailsScreen.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/MetaDetailsScreen.kt
-@@ -2594,7 +2594,7 @@ private fun ConfiguredMetaSections(
+@@ -2638,7 +2638,7 @@ private fun ConfiguredMetaSections(
                      }
                      DetailPosterRailSection(
                          title = stringResource(Res.string.details_more_like_this),
@@ -248,10 +248,10 @@ index 000000000..59206924e
 +        else section.copy(items = items, availableItemCount = items.size)
 +    }
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
-index 1118edf24..ded95c684 100644
+index 430d345ad..78c792cf4 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
-@@ -939,8 +939,9 @@ fun HomeScreen(
+@@ -942,8 +942,9 @@ fun HomeScreen(
      val collectionsMap = remember(visibleCollections) {
          visibleCollections.associateBy { "collection_${it.id}" }
      }
@@ -263,7 +263,7 @@ index 1118edf24..ded95c684 100644
      }
      val enabledHomeItems = remember(homeSettingsUiState.items) {
          homeSettingsUiState.items.filter { it.enabled }
-@@ -1218,7 +1219,8 @@ fun HomeScreen(
+@@ -1230,7 +1231,8 @@ fun HomeScreen(
                          val forkRowsInOrder = listOfNotNull(forkTrendingRows?.topShows) +
                              forkRows +
                              listOfNotNull(forkTrendingRows?.topMovies) // Fork: no Trending Now row (Trending / New covers it)

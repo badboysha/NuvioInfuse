@@ -1,8 +1,8 @@
 diff --git a/composeApp/src/androidMain/kotlin/com/nuvio/app/MainActivity.kt b/composeApp/src/androidMain/kotlin/com/nuvio/app/MainActivity.kt
-index c4f097406..55b008b78 100644
+index 8647385e2..7ade164c8 100644
 --- a/composeApp/src/androidMain/kotlin/com/nuvio/app/MainActivity.kt
 +++ b/composeApp/src/androidMain/kotlin/com/nuvio/app/MainActivity.kt
-@@ -177,6 +177,7 @@ open class MainActivity : AppCompatActivity() {
+@@ -180,6 +180,7 @@ open class MainActivity : AppCompatActivity() {
          ProfileTitleFactsStorage.initialize(applicationContext)
          PluginStorage.initialize(applicationContext)
          CollectionMobileSettingsStorage.initialize(applicationContext)
@@ -74,10 +74,10 @@ index 000000000..202c229de
 +    }
 +}
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
-index a7f7cb50a..ef7c1c12e 100644
+index 2a946a106..e878e4aad 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
-@@ -332,8 +332,13 @@ fun HomeScreen(
+@@ -335,8 +335,13 @@ fun HomeScreen(
      // watched list changes; the shared side caches by last-watched titles.
      var forkRows by remember(activeProfileId) { mutableStateOf<List<HomeCatalogSection>>(emptyList()) }
      val latestWatchedId = watchedUiState.items.maxByOrNull { it.markedAtEpochMs }?.id

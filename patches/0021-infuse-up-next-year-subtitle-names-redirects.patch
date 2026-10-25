@@ -40,10 +40,10 @@ index cd486bd98..bd5d1226f 100644
      val meta = MetaDetailsRepository.peek(parentMetaType, parentMetaId) ?: return null
      val episodeRuntimeMinutes = meta.videos
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
-index 21ef801db..dee45d4f9 100644
+index 093322e12..4d079076f 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
-@@ -142,6 +142,8 @@ import com.nuvio.app.features.player.externalPlaybackSession
+@@ -145,6 +145,8 @@ import com.nuvio.app.features.player.externalPlaybackSession
  import com.nuvio.app.features.player.infusePlaybackCallbacks
  import com.nuvio.app.features.player.ExternalMovieSuggestions
  import com.nuvio.app.features.player.ExternalMovieSuggestionsOverlay
@@ -52,7 +52,7 @@ index 21ef801db..dee45d4f9 100644
  import com.nuvio.app.features.player.recordExternalPlaybackProgress
  import com.nuvio.app.features.player.ExternalPlayerPlatform
  import com.nuvio.app.features.player.PlayerLaunch
-@@ -808,6 +810,7 @@ internal fun MainAppContent(
+@@ -811,6 +813,7 @@ internal fun MainAppContent(
              coroutineScope.launch {
                  recordExternalPlaybackProgress(result, fallbackSession)
                  ExternalMovieSuggestions.onExternalPlaybackReturned(result, fallbackSession)
@@ -60,7 +60,7 @@ index 21ef801db..dee45d4f9 100644
                  result.callbackId?.let(infusePlaybackCallbacks::consume)
              }
          }
-@@ -937,6 +940,10 @@ internal fun MainAppContent(
+@@ -940,6 +943,10 @@ internal fun MainAppContent(
                  preferredLanguage = playerSettingsUiState.preferredSubtitleLanguage,
                  secondaryLanguage = playerSettingsUiState.secondaryPreferredSubtitleLanguage,
                  onOverlayMessage = { message -> StreamsRepository.setOverlayVisible(true, message) },
@@ -71,7 +71,7 @@ index 21ef801db..dee45d4f9 100644
              )
              StreamsRepository.setOverlayVisible(false)
              // Fork: say so when forwarding found nothing, instead of Infuse silently opening without them.
-@@ -2423,6 +2430,30 @@ internal fun MainAppContent(
+@@ -2430,6 +2437,30 @@ internal fun MainAppContent(
                      .zIndex(15f),
              )
  

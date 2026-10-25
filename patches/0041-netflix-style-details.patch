@@ -1,5 +1,5 @@
 diff --git a/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt
-index c26d1ebe..c92fa8fb 100644
+index c26d1ebeb..c92fa8fb7 100644
 --- a/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt
 +++ b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt
 @@ -7,6 +7,7 @@ internal actual object ForkHomeSettingsStorage {
@@ -23,7 +23,7 @@ index c26d1ebe..c92fa8fb 100644
 +    }
  }
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/DetailActionButtons.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/DetailActionButtons.kt
-index 43f9610b..0dfcdf5e 100644
+index 43f9610bf..0dfcdf5ee 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/DetailActionButtons.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/DetailActionButtons.kt
 @@ -724,6 +724,8 @@ private fun PlayButton(
@@ -61,10 +61,10 @@ index 43f9610b..0dfcdf5e 100644
              } else {
                  MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/DetailHero.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/DetailHero.kt
-index a1126cca..c52ce58c 100644
+index 15c2cfae3..17fe70c96 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/DetailHero.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/DetailHero.kt
-@@ -253,6 +253,9 @@ fun DetailHero(
+@@ -256,6 +256,9 @@ fun DetailHero(
                          )
                      }
  
@@ -76,7 +76,7 @@ index a1126cca..c52ce58c 100644
                          Text(
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/ForkNetflixDetails.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/ForkNetflixDetails.kt
 new file mode 100644
-index 00000000..6d70081f
+index 000000000..6d70081f8
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/components/ForkNetflixDetails.kt
 @@ -0,0 +1,77 @@
@@ -158,7 +158,7 @@ index 00000000..6d70081f
 +    return white
 +}
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt
-index 0f02d5cb..7e3b4dfb 100644
+index 0f02d5cb6..7e3b4dfb9 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt
 @@ -91,6 +91,26 @@ object ForkHomeRows {
@@ -189,7 +189,7 @@ index 0f02d5cb..7e3b4dfb 100644
      suspend fun becauseYouWatchedChecked(maxRows: Int): List<HomeCatalogSection> = becauseYouWatched(maxRows)
  
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
-index 4f5dbe2a..a081b9e6 100644
+index 4f5dbe2a1..a081b9e6d 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
 @@ -9,6 +9,8 @@ internal expect object ForkHomeSettingsStorage {
@@ -227,7 +227,7 @@ index 4f5dbe2a..a081b9e6 100644
      fun setTrendingRowsEnabled(enabled: Boolean) {
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/ForkNetflixDetailsSettings.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/ForkNetflixDetailsSettings.kt
 new file mode 100644
-index 00000000..545f9061
+index 000000000..545f90619
 --- /dev/null
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/ForkNetflixDetailsSettings.kt
 @@ -0,0 +1,63 @@
@@ -295,7 +295,7 @@ index 00000000..545f9061
 +    ForkHomeSettings.setWhitePlayButton(true)
 +}
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/MetaScreenSettingsPage.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/MetaScreenSettingsPage.kt
-index 8033d602..246befe7 100644
+index 8033d602a..246befe7d 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/MetaScreenSettingsPage.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/MetaScreenSettingsPage.kt
 @@ -142,6 +142,9 @@ internal fun LazyListScope.metaScreenSettingsContent(
@@ -309,7 +309,7 @@ index 8033d602..246befe7 100644
                      title = stringResource(Res.string.settings_meta_background_mode),
                      description = stringResource(Res.string.settings_meta_background_mode_description),
 diff --git a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt
-index ca31fd26..b1b41fdb 100644
+index ca31fd269..b1b41fdb4 100644
 --- a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt
 +++ b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt
 @@ -5,6 +5,7 @@ import platform.Foundation.NSUserDefaults

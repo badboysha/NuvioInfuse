@@ -187,10 +187,10 @@ index 8f23117ec..5ef45fd10 100644
          },
          onDismiss = ExternalUpNext::dismiss,
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/PlaybackSettingsPage.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/PlaybackSettingsPage.kt
-index 75de0c221..caa438afb 100644
+index dfcd044a4..52d34a392 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/PlaybackSettingsPage.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/PlaybackSettingsPage.kt
-@@ -1397,6 +1397,24 @@ private fun PlaybackSettingsSection(
+@@ -1471,6 +1471,24 @@ private fun PlaybackSettingsSection(
                      isTablet = isTablet,
                      onCheckedChange = PlayerSettingsRepository::setStreamAutoPlayNextEpisodeEnabled,
                  )

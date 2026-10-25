@@ -16,7 +16,7 @@ index 9f79ef8cb..e3b665ebc 100644
  
      actual fun saveStillWatchingOffProfiles(value: String) {
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/core/ui/ShelfComponents.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/core/ui/ShelfComponents.kt
-index deab5fb7b..3c5c14041 100644
+index bc41ae064..9231b2eae 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/core/ui/ShelfComponents.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/core/ui/ShelfComponents.kt
 @@ -136,6 +136,8 @@ fun NuvioPosterCard(
@@ -329,10 +329,10 @@ index 000000000..84e2f08fc
 +    }
 +}
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
-index ded95c684..2f5194823 100644
+index 78c792cf4..018f392df 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
-@@ -587,12 +587,21 @@ fun HomeScreen(
+@@ -590,12 +590,21 @@ fun HomeScreen(
      val shuffledContinueWatchingItems = remember(rawShuffledContinueWatchingItems, cwPosterPattern) {
          rawShuffledContinueWatchingItems.withCustomPosterUrls(cwPosterPattern)
      }
@@ -355,7 +355,7 @@ index ded95c684..2f5194823 100644
              mode = continueWatchingPreferences.sortMode,
          )
      }
-@@ -940,8 +949,11 @@ fun HomeScreen(
+@@ -943,8 +952,8 @@ fun HomeScreen(
          visibleCollections.associateBy { "collection_${it.id}" }
      }
      val forkKidsFilter = rememberForkKidsFilter() // Fork: kids rating limit
@@ -363,22 +363,23 @@ index ded95c684..2f5194823 100644
 -        homeUiState.sections.forkKids(forkKidsFilter).associateBy(HomeCatalogSection::key)
 +    val sectionsMap = remember(homeUiState.sections, forkKidsFilter, forkTypeFilter) {
 +        homeUiState.sections.forkKids(forkKidsFilter).forkType(forkTypeFilter).associateBy(HomeCatalogSection::key)
-+    }
-+    val forkHeroItems = remember(homeUiState.heroItems, forkTypeFilter) {
-+        homeUiState.heroItems.filter { forkTypeFilter.matchesType(it.type) }.ifEmpty { homeUiState.heroItems }
      }
      val enabledHomeItems = remember(homeSettingsUiState.items) {
          homeSettingsUiState.items.filter { it.enabled }
-@@ -1057,7 +1069,7 @@ fun HomeScreen(
-                             )
+@@ -1066,7 +1075,11 @@ fun HomeScreen(
+                                 )
  
-                             homeUiState.heroItems.isNotEmpty() -> HomeHeroSection(
--                                items = homeUiState.heroItems,
-+                                items = forkHeroItems,
-                                 modifier = Modifier,
-                                 viewportHeight = maxHeight,
-                                 mobileBelowSectionHeightHint = mobileHeroBelowSectionHeightHint,
-@@ -1085,6 +1097,16 @@ fun HomeScreen(
+                                 homeUiState.heroItems.isNotEmpty() -> HomeHeroSection(
+-                                    items = homeHeroState.items,
++                                    // Fork: Shows / Movies switch also narrows the hero.
++                                    items = remember(homeHeroState.items, forkTypeFilter) {
++                                        homeHeroState.items.filter { forkTypeFilter.matchesType(it.type) }
++                                            .ifEmpty { homeHeroState.items }
++                                    },
+                                     modifier = Modifier,
+                                     viewportHeight = maxHeight,
+                                     mobileBelowSectionHeightHint = mobileHeroBelowSectionHeightHint,
+@@ -1097,6 +1110,16 @@ fun HomeScreen(
                      }
                  }
  
@@ -395,7 +396,7 @@ index ded95c684..2f5194823 100644
                  when {
                      isInitialHomeContentLoading -> {
                          homeContinueWatchingSections(
-@@ -1219,7 +1241,7 @@ fun HomeScreen(
+@@ -1231,7 +1254,7 @@ fun HomeScreen(
                          val forkRowsInOrder = listOfNotNull(forkTrendingRows?.topShows) +
                              forkRows +
                              listOfNotNull(forkTrendingRows?.topMovies) // Fork: no Trending Now row (Trending / New covers it)
@@ -618,12 +619,12 @@ index d24cb4223..7b8bb1380 100644
  private fun ArtworkPanel(
      imageUrl: String?,
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeHeroSection.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeHeroSection.kt
-index 39e034069..5f379bb34 100644
+index 14ef1d4a8..73109f3f0 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeHeroSection.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeHeroSection.kt
-@@ -889,6 +889,25 @@ private fun HeroContentBlock(
-             HeroTypePill(text = typeLabel)
-         }
+@@ -876,6 +876,25 @@ private fun HeroContentBlock(
+             showMdbListRatings = showMdbListRatings,
+         )
  
 +        // Fork: Netflix Home — "Crime  •  Drama  •  Thriller" line under the details.
 +        val forkNetflixHome by remember {
