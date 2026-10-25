@@ -591,7 +591,7 @@ index 032c9d0b4..0f141e6ab 100644
                  androidx.compose.foundation.layout.Spacer(
                      Modifier.padding(top = if (isTablet) 16.dp else 12.dp),
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
-index 801bb5ac1..e8a65db53 100644
+index 09032536b..713021f56 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
 @@ -1,5 +1,7 @@
@@ -602,7 +602,7 @@ index 801bb5ac1..e8a65db53 100644
  import co.touchlab.kermit.Logger
  import com.nuvio.app.features.addons.httpGetText
  import com.nuvio.app.features.details.MetaCompany
-@@ -1264,6 +1266,56 @@ object TmdbMetadataService {
+@@ -1297,6 +1299,56 @@ object TmdbMetadataService {
       * Fork: kids rating limit — a title's age rating (US first) for any Nuvio id (tt… / tmdb:…),
       * or null when TMDB has none or the title can't be matched.
       */
@@ -659,7 +659,7 @@ index 801bb5ac1..e8a65db53 100644
      suspend fun forkAgeRating(id: String, type: String): String? {
          val mediaType = if (type.equals("series", true) || type.equals("tv", true)) "tv" else "movie"
          val tmdbId = runCatching { TmdbService.ensureTmdbId(id, mediaType) }.getOrNull()
-@@ -2126,6 +2178,35 @@ private data class TmdbReleaseDate(
+@@ -2161,6 +2213,35 @@ private data class TmdbReleaseDate(
      val certification: String? = null,
  )
  

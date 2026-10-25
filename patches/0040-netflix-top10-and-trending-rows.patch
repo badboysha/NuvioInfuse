@@ -178,10 +178,10 @@ index d6179273d..6e660e72b 100644
                  androidx.compose.foundation.layout.Spacer(
                      Modifier.padding(top = if (isTablet) 16.dp else 12.dp),
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
-index 10238f1b6..b43375cc3 100644
+index fd0bac038..4fec92868 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
-@@ -1241,6 +1241,44 @@ object TmdbMetadataService {
+@@ -1274,6 +1274,44 @@ object TmdbMetadataService {
          return fetchMoreLikeThis(tmdbId = tmdbId, mediaType = mediaType, language = language).items
      }
  

@@ -179,10 +179,10 @@ index 6e660e72b..2e19e7c15 100644
                  androidx.compose.foundation.layout.Spacer(
                      Modifier.padding(top = if (isTablet) 16.dp else 12.dp),
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
-index b43375cc3..5f9424d57 100644
+index 4fec92868..f24124e13 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
-@@ -1252,33 +1252,44 @@ object TmdbMetadataService {
+@@ -1285,33 +1285,44 @@ object TmdbMetadataService {
              endpoint = "trending/$mediaType/$window",
              query = mapOf("language" to language),
          ) ?: return emptyList()
@@ -252,10 +252,10 @@ index b43375cc3..5f9424d57 100644
      private suspend fun fetchMoreLikeThis(
          tmdbId: Int,
          mediaType: String,
-@@ -2338,3 +2349,31 @@ internal data class TmdbDiscoverResult(
-     @SerialName("vote_average") val voteAverage: Double? = null,
-     @SerialName("vote_count") val voteCount: Int? = null,
- )
+@@ -2381,3 +2392,31 @@ private fun originalImagePath(images: List<TmdbImage>?, originalLanguage: String
+         ?.filePath
+         ?.trim()
+ }
 +
 +/** Fork: TMDB list items → previews for the Top 10 / Trending rows (people dropped). */
 +private fun forkMapTrending(results: List<TmdbRecommendationItem>, mediaType: String): List<MetaPreview> =

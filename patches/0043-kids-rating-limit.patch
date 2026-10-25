@@ -333,10 +333,10 @@ index 2e19e7c15..032c9d0b4 100644
                  androidx.compose.foundation.layout.Spacer(
                      Modifier.padding(top = if (isTablet) 16.dp else 12.dp),
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
-index 5f9424d57..801bb5ac1 100644
+index f24124e13..09032536b 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
-@@ -1260,6 +1260,22 @@ object TmdbMetadataService {
+@@ -1293,6 +1293,22 @@ object TmdbMetadataService {
       * that TMDB files as Family / Animation films rated PG or lower in the US, or Kids / Family
       * shows. [mediaType] is "movie" or "tv".
       */

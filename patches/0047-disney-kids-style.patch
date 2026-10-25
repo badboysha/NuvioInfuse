@@ -262,10 +262,10 @@ index 0f141e6ab..7aaefdeeb 100644
                          SettingsSwitchRow(
                              title = "Card Tags",
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
-index e8a65db53..2fc02fcf9 100644
+index 713021f56..12b621c75 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
-@@ -1272,6 +1272,12 @@ object TmdbMetadataService {
+@@ -1305,6 +1305,12 @@ object TmdbMetadataService {
       * beside it. Movies: "Recently Added" when the digital release was in the last 30 days.
       * Returns null when TMDB can't be reached, (null, null) when there's nothing to tag.
       */
@@ -278,7 +278,7 @@ index e8a65db53..2fc02fcf9 100644
      suspend fun forkFreshness(id: String, type: String): Pair<String?, String?>? {
          val mediaType = if (type.equals("series", true) || type.equals("tv", true)) "tv" else "movie"
          val tmdbId = runCatching { TmdbService.ensureTmdbId(id, mediaType) }.getOrNull()
-@@ -2178,6 +2184,11 @@ private data class TmdbReleaseDate(
+@@ -2213,6 +2219,11 @@ private data class TmdbReleaseDate(
      val certification: String? = null,
  )
  
