@@ -1,27 +1,57 @@
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/AppShellComponents.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/AppShellComponents.kt
+index daf68d09e..98830b293 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/AppShellComponents.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/AppShellComponents.kt
+@@ -145,6 +145,8 @@ internal data class AppTabRequests(
+ internal data class AppTabActions(
+     val onCatalogClick: ((HomeCatalogSection) -> Unit)? = null,
+     val onPosterClick: ((MetaPreview) -> Unit)? = null,
++    /** Fork: Kids studio tiles — (kind "company"/"network", TMDB id, name). */
++    val onKidsBrandClick: ((String, Int, String) -> Unit)? = null,
+     val onPosterLongClick: ((MetaPreview) -> Unit)? = null,
+     val onLibraryPosterClick: ((LibraryItem) -> Unit)? = null,
+     val onLibraryCalendarEpisodeClick: ((LibraryItem, Int?, Int?) -> Unit)? = null,
+@@ -194,6 +196,9 @@ internal fun AppTabHost(
+         when (tab) {
+             AppScreenTab.Home -> {
+                 key(state.homeContentGeneration) {
++                    androidx.compose.runtime.CompositionLocalProvider(
++                        com.nuvio.app.features.home.LocalForkOpenBrand provides actions.onKidsBrandClick,
++                    ) {
+                     HomeScreen(
+                         modifier = Modifier.fillMaxSize(),
+                         animateCollectionGifs = state.animateHomeCollectionGifs,
+@@ -207,6 +212,7 @@ internal fun AppTabHost(
+                         onFolderClick = actions.onFolderClick,
+                         onFirstCatalogRendered = actions.onInitialHomeContentRendered,
+                     )
++                    }
+                 }
+             }
+ 
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
-index f12f6956e..0fa557146 100644
+index f12f6956e..c89dc9668 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/MainAppContent.kt
-@@ -258,6 +258,19 @@ internal fun MainAppContent(
-                 onLocalPop = if (posterNavigationEnabled) posterNavigation::clear else null,
-             )
-         }
-+        // Fork: a Kids studio tile (Disney+ look) opens that studio's titles.
-+        androidx.compose.runtime.SideEffect {
-+            com.nuvio.app.features.home.ForkDisneyKids.onOpenBrand = { kind, tmdbId, name ->
-+                navController.navigate(
-+                    EntityBrowseRoute(
-+                        entityKind = kind,
-+                        entityId = tmdbId,
-+                        entityName = name,
-+                        sourceType = if (kind == "network") "tv" else "movie",
-+                    ),
-+                )
-+            }
-+        }
-         val appUpdaterController = rememberAppUpdaterController()
-         if (ownsAppRuntime) {
-             remember {
+@@ -1659,6 +1659,18 @@ internal fun MainAppContent(
+                             AppTabActions(
+                                 onCatalogClick = onCatalogClick,
+                                 onPosterClick = navController::openPreview,
++                                // Fork: a Kids studio tile (Disney+ look) opens that studio's titles
++                                // on this tab's own stack, so Back returns to Home.
++                                onKidsBrandClick = { kind, tmdbId, name ->
++                                    navController.navigate(
++                                        EntityBrowseRoute(
++                                            entityKind = kind,
++                                            entityId = tmdbId,
++                                            entityName = name,
++                                            sourceType = if (kind == "network") "tv" else "movie",
++                                        ),
++                                    )
++                                },
+                                 onPosterLongClick = { meta ->
+                                     openPosterActions(PosterActionTarget(preview = meta))
+                                 },
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
 index 78eaf6776..3ac89e905 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
@@ -57,10 +87,10 @@ index 78eaf6776..3ac89e905 100644
          ensureLoaded()
          _netflixHome.value = enabled
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkNetflixHome.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkNetflixHome.kt
-index b29182e73..0fced8647 100644
+index b29182e73..b5f88374e 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkNetflixHome.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkNetflixHome.kt
-@@ -187,3 +187,110 @@ internal fun ForkPlayCircle(size: Dp, modifier: Modifier = Modifier) {
+@@ -187,3 +187,113 @@ internal fun ForkPlayCircle(size: Dp, modifier: Modifier = Modifier) {
          )
      }
  }
@@ -87,8 +117,6 @@ index b29182e73..0fced8647 100644
 +        Brand(56, "Cartoon Network", true),
 +    )
 +
-+    /** Set by the app root: opens the studio's titles (kind is "company" or "network"). */
-+    var onOpenBrand: ((kind: String, tmdbId: Int, name: String) -> Unit)? = null
 +
 +    private val logosState = MutableStateFlow<Map<String, String>>(emptyMap())
 +    val logos: StateFlow<Map<String, String>> = logosState.asStateFlow()
@@ -109,6 +137,10 @@ index b29182e73..0fced8647 100644
 +    }
 +}
 +
++/** Fork: the Home tab's "open studio" action — (kind "company"/"network", TMDB id, name). */
++internal val LocalForkOpenBrand =
++    androidx.compose.runtime.staticCompositionLocalOf<((String, Int, String) -> Unit)?> { null }
++
 +@Composable
 +internal fun ForkKidsBrandRow(horizontalPadding: Dp, modifier: Modifier = Modifier) {
 +    val logos by ForkDisneyKids.logos.collectAsStateWithLifecycle()
@@ -127,6 +159,7 @@ index b29182e73..0fced8647 100644
 +
 +@Composable
 +private fun ForkKidsBrandTile(brand: ForkDisneyKids.Brand, logoUrl: String?) {
++    val openBrand = LocalForkOpenBrand.current
 +    val shape = RoundedCornerShape(10.dp)
 +    Box(
 +        modifier = Modifier
@@ -139,7 +172,7 @@ index b29182e73..0fced8647 100644
 +            )
 +            .border(1.dp, Color.White.copy(alpha = 0.18f), shape)
 +            .clickable {
-+                ForkDisneyKids.onOpenBrand?.invoke(
++                openBrand?.invoke(
 +                    if (brand.isNetwork) "network" else "company",
 +                    brand.tmdbId,
 +                    brand.name,
@@ -262,10 +295,21 @@ index 0f141e6ab..7aaefdeeb 100644
                          SettingsSwitchRow(
                              title = "Card Tags",
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
-index 713021f56..12b621c75 100644
+index 713021f56..1e847a92a 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
-@@ -1305,6 +1305,12 @@ object TmdbMetadataService {
+@@ -406,7 +406,9 @@ object TmdbMetadataService {
+         fallbackName: String? = null,
+     ): TmdbEntityBrowseData? = withContext(Dispatchers.Default) {
+         val settings = TmdbSettingsRepository.snapshot()
+-        if (!settings.enabled) return@withContext null
++        // Fork: studio pages work whenever a TMDB key is available (the built-in one included),
++        // even with TMDB enrichment switched off.
++        if (!settings.enabled && TmdbSettingsRepository.effectiveApiKey().isBlank()) return@withContext null
+         val language = normalizeTmdbLanguage(settings.language)
+         val normalizedSourceType = normalizeEntitySourceType(sourceType)
+         val cacheKey = "${entityKind.routeValue}:$entityId:$normalizedSourceType:$language"
+@@ -1305,6 +1307,12 @@ object TmdbMetadataService {
       * beside it. Movies: "Recently Added" when the digital release was in the last 30 days.
       * Returns null when TMDB can't be reached, (null, null) when there's nothing to tag.
       */
@@ -278,7 +322,7 @@ index 713021f56..12b621c75 100644
      suspend fun forkFreshness(id: String, type: String): Pair<String?, String?>? {
          val mediaType = if (type.equals("series", true) || type.equals("tv", true)) "tv" else "movie"
          val tmdbId = runCatching { TmdbService.ensureTmdbId(id, mediaType) }.getOrNull()
-@@ -2213,6 +2219,11 @@ private data class TmdbReleaseDate(
+@@ -2213,6 +2221,11 @@ private data class TmdbReleaseDate(
      val certification: String? = null,
  )
  
