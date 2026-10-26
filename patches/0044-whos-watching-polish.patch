@@ -1,0 +1,121 @@
+diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/profiles/ProfileSelectionScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/profiles/ProfileSelectionScreen.kt
+index d340775c9..eb803a066 100644
+--- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/profiles/ProfileSelectionScreen.kt
++++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/profiles/ProfileSelectionScreen.kt
+@@ -1,5 +1,6 @@
+ package com.nuvio.app.features.profiles
+ 
++import kotlinx.datetime.toLocalDateTime
+ import androidx.compose.animation.core.Animatable
+ import androidx.compose.animation.core.FastOutSlowInEasing
+ import androidx.compose.animation.core.tween
+@@ -255,8 +256,27 @@ fun ProfileSelectionScreen(
+                     },
+                 )
+ 
++                // Fork: time-of-day greeting under the title.
++                Text(
++                    text = forkGreeting(),
++                    style = MaterialTheme.typography.bodyLarge,
++                    color = MaterialTheme.colorScheme.onSurfaceVariant,
++                    modifier = Modifier
++                        .padding(top = 6.dp)
++                        .graphicsLayer {
++                            alpha = titleAlpha.value
++                            translationY = titleOffset.value
++                        },
++                )
++
+                 Spacer(modifier = Modifier.height(if (isTabletLayout) 28.dp else 48.dp))
+ 
++                val forkKidsLimit by remember {
++                    com.nuvio.app.features.home.ForkHomeSettings.ensureLoaded()
++                    com.nuvio.app.features.home.ForkHomeSettings.kidsLimitProfiles
++                }.collectAsStateWithLifecycle()
++                val forkKidsTrending by com.nuvio.app.features.home.ForkHomeSettings.kidsTrendingProfiles
++                    .collectAsStateWithLifecycle()
+                 val profiles = profileState.profiles
+                 val items = profiles.size + if (isEditMode && profiles.size < MAX_PROFILES) 1 else 0
+ 
+@@ -277,6 +297,8 @@ fun ProfileSelectionScreen(
+                                     ProfileAvatarCard(
+                                         profile = profile,
+                                         isEditMode = isEditMode,
++                                        isKids = profile.profileIndex in forkKidsLimit || profile.profileIndex in forkKidsTrending,
++                                        isLastUsed = profile.profileIndex == activeProfileIndex,
+                                         animDelay = currentIndex * 80,
+                                         enabled = interactionEnabled,
+                                         onClick = { tapCenter ->
+@@ -313,6 +335,8 @@ fun ProfileSelectionScreen(
+                                             ProfileAvatarCard(
+                                                 profile = profile,
+                                                 isEditMode = isEditMode,
++                                                isKids = profile.profileIndex in forkKidsLimit || profile.profileIndex in forkKidsTrending,
++                                                isLastUsed = profile.profileIndex == activeProfileIndex,
+                                                 animDelay = currentIndex * 80,
+                                                 enabled = interactionEnabled,
+                                                 onClick = { tapCenter ->
+@@ -422,6 +446,8 @@ fun ProfileSelectionScreen(
+ private fun ProfileAvatarCard(
+     profile: NuvioProfile,
+     isEditMode: Boolean,
++    isKids: Boolean = false,
++    isLastUsed: Boolean = false,
+     animDelay: Int,
+     enabled: Boolean,
+     onClick: (Offset) -> Unit,
+@@ -518,8 +544,12 @@ private fun ProfileAvatarCard(
+                         },
+                     )
+                     .then(
+-                        if (avatarImageUrl == null) Modifier.border(2.dp, avatarColor.copy(alpha = 0.4f), CircleShape)
+-                        else Modifier,
++                        when {
++                            // Fork: accent ring on the profile used last.
++                            isLastUsed && !isEditMode -> Modifier.border(3.dp, MaterialTheme.colorScheme.primary, CircleShape)
++                            avatarImageUrl == null -> Modifier.border(2.dp, avatarColor.copy(alpha = 0.4f), CircleShape)
++                            else -> Modifier
++                        },
+                     ),
+                 contentAlignment = Alignment.Center,
+             ) {
+@@ -600,6 +630,39 @@ private fun ProfileAvatarCard(
+             maxLines = 1,
+             overflow = TextOverflow.Ellipsis,
+         )
++
++        if (isKids) {
++            // Fork: Disney+-style Kids tag.
++            Spacer(modifier = Modifier.height(6.dp))
++            Text(
++                text = "KIDS",
++                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, letterSpacing = 1.2.sp),
++                color = Color.Black,
++                fontWeight = FontWeight.Bold,
++                modifier = Modifier
++                    .clip(RoundedCornerShape(50))
++                    .background(Color(0xFFFFD54F))
++                    .padding(horizontal = 10.dp, vertical = 3.dp),
++            )
++        } else if (isLastUsed && !isEditMode) {
++            Spacer(modifier = Modifier.height(6.dp))
++            Text(
++                text = "Last used",
++                style = MaterialTheme.typography.labelSmall,
++                color = MaterialTheme.colorScheme.onSurfaceVariant,
++            )
++        }
++    }
++}
++
++/** Fork: "Good morning / afternoon / evening" in the device's time zone. */
++private fun forkGreeting(): String {
++    val hour = kotlin.time.Clock.System.now()
++        .toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault()).hour
++    return when (hour) {
++        in 5..11 -> "Good morning"
++        in 12..16 -> "Good afternoon"
++        else -> "Good evening"
+     }
+ }
+ 

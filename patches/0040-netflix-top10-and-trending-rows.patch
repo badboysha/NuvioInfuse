@@ -1,5 +1,5 @@
 diff --git a/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt
-index 369e181b..c26d1ebe 100644
+index 369e181b4..c26d1ebeb 100644
 --- a/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt
 +++ b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt
 @@ -6,6 +6,7 @@ import android.content.SharedPreferences
@@ -23,7 +23,7 @@ index 369e181b..c26d1ebe 100644
 +    }
  }
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt
-index 166e2501..0f02d5cb 100644
+index 166e25015..0f02d5cb6 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt
 @@ -9,6 +9,8 @@ import kotlinx.coroutines.sync.withLock
@@ -82,7 +82,7 @@ index 166e2501..0f02d5cb 100644
      suspend fun becauseYouWatchedChecked(maxRows: Int): List<HomeCatalogSection> = becauseYouWatched(maxRows)
  
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
-index 202c229d..4f5dbe2a 100644
+index 202c229de..4f5dbe2a1 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
 @@ -7,18 +7,29 @@ import kotlinx.coroutines.flow.asStateFlow
@@ -116,10 +116,10 @@ index 202c229d..4f5dbe2a 100644
  
      fun setBecauseRowsEnabled(enabled: Boolean) {
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
-index ef7c1c12..dbbeb32f 100644
+index e878e4aad..86937a55b 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
-@@ -341,6 +341,18 @@ fun HomeScreen(
+@@ -344,6 +344,18 @@ fun HomeScreen(
          else runCatching { ForkHomeRows.becauseYouWatched(2) }.getOrDefault(emptyList())
      }
  
@@ -138,7 +138,7 @@ index ef7c1c12..dbbeb32f 100644
      LaunchedEffect(activeProfileId, continueWatchingListState) {
          snapshotFlow { continueWatchingListState.isScrollInProgress }.collect { isScrolling ->
              if (isScrolling) hasUserScrolledContinueWatching = true
-@@ -1194,7 +1206,13 @@ fun HomeScreen(
+@@ -1206,7 +1218,13 @@ fun HomeScreen(
                          disintegrationRequest = continueWatchingDisintegrationRequest,
                          )
  
@@ -154,7 +154,7 @@ index ef7c1c12..dbbeb32f 100644
                                  HomeCatalogRowSection(
                                      section = section,
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt
-index d6179273..6e660e72 100644
+index d6179273d..6e660e72b 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt
 @@ -272,6 +272,19 @@ internal fun LazyListScope.homescreenSettingsContent(
@@ -178,10 +178,10 @@ index d6179273..6e660e72 100644
                  androidx.compose.foundation.layout.Spacer(
                      Modifier.padding(top = if (isTablet) 16.dp else 12.dp),
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
-index 10238f1b..b43375cc 100644
+index fd0bac038..4fec92868 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
-@@ -1241,6 +1241,44 @@ object TmdbMetadataService {
+@@ -1274,6 +1274,44 @@ object TmdbMetadataService {
          return fetchMoreLikeThis(tmdbId = tmdbId, mediaType = mediaType, language = language).items
      }
  
@@ -227,7 +227,7 @@ index 10238f1b..b43375cc 100644
          tmdbId: Int,
          mediaType: String,
 diff --git a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt
-index 9d7125b0..ca31fd26 100644
+index 9d7125b02..ca31fd269 100644
 --- a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt
 +++ b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt
 @@ -4,6 +4,7 @@ import platform.Foundation.NSUserDefaults

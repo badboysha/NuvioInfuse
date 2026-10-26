@@ -65,10 +65,10 @@ index 000000000..7c07b278d
 +    }
 +}
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamsScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamsScreen.kt
-index 2ff269430..46a24f378 100644
+index bb6f80bee..70a164fc4 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamsScreen.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/streams/StreamsScreen.kt
-@@ -814,6 +814,18 @@ internal fun StreamList(
+@@ -821,6 +821,18 @@ internal fun StreamList(
          splitPinnedSources(filteredGroups, pinnedSourceIds)
      }
  
@@ -87,7 +87,7 @@ index 2ff269430..46a24f378 100644
      CompositionLocalProvider(LocalStreamSizeLabelFormat provides formatStreamSize) {
      LazyColumn(
          modifier = modifier.fillMaxWidth(),
-@@ -930,7 +942,8 @@ private fun LazyListScope.streamSection(
+@@ -937,7 +949,8 @@ private fun LazyListScope.streamSection(
      resumePositionMs: Long?,
      resumeProgressFraction: Float?,
  ) {

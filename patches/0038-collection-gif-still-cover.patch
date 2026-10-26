@@ -1,5 +1,5 @@
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeCollectionRowSection.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeCollectionRowSection.kt
-index e8916fa..7a368a1 100644
+index e8916fa16..57b79711f 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeCollectionRowSection.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/components/HomeCollectionRowSection.kt
 @@ -147,15 +147,35 @@ private fun CollectionFolderCard(
@@ -48,12 +48,12 @@ index e8916fa..7a368a1 100644
                      !folder.coverEmoji.isNullOrBlank() -> {
                          Text(
 diff --git a/composeApp/src/iosMain/kotlin/com/nuvio/app/core/ui/NuvioAsyncImage.ios.kt b/composeApp/src/iosMain/kotlin/com/nuvio/app/core/ui/NuvioAsyncImage.ios.kt
-index cbd444b..983fa2d 100644
+index 4a28dd1da..d44d85099 100644
 --- a/composeApp/src/iosMain/kotlin/com/nuvio/app/core/ui/NuvioAsyncImage.ios.kt
 +++ b/composeApp/src/iosMain/kotlin/com/nuvio/app/core/ui/NuvioAsyncImage.ios.kt
 @@ -26,22 +26,27 @@ internal actual fun NuvioAsyncImage(
      }
-
+ 
      BoxWithConstraints(modifier = modifier) {
 +        val maxEdge = 320
          val targetWidth = constraints.maxWidth
@@ -64,9 +64,9 @@ index cbd444b..983fa2d 100644
              .takeIf { it in 1..MaxAnimationTargetEdgePx }
 +            ?.coerceAtMost(maxEdge)
              ?: DefaultAnimationTargetEdgePx
-
+ 
          val state = rememberAnimatedFrame(imageUrl, targetWidth, targetHeight)
-
+ 
          when {
 -            state.unavailable -> AsyncImage(
 -                model = imageUrl,
@@ -82,6 +82,6 @@ index cbd444b..983fa2d 100644
 +                    contentScale = contentScale,
 +                )
 +            }
-
+ 
              state.bitmap != null -> Image(
                  bitmap = state.bitmap,

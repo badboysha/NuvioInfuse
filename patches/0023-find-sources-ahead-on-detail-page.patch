@@ -122,10 +122,10 @@ index 000000000..46669104b
 +    }
 +}
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/MetaDetailsScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/MetaDetailsScreen.kt
-index 598639ced..45a52b701 100644
+index 956063556..73fcba6eb 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/MetaDetailsScreen.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/details/MetaDetailsScreen.kt
-@@ -53,6 +53,7 @@ import com.nuvio.app.core.ui.NuvioLoadingIndicator
+@@ -54,6 +54,7 @@ import com.nuvio.app.core.ui.NuvioLoadingIndicator
  import androidx.compose.material3.MaterialTheme
  import androidx.compose.material3.Text
  import androidx.compose.runtime.Composable
@@ -133,7 +133,7 @@ index 598639ced..45a52b701 100644
  import androidx.compose.runtime.CompositionLocalProvider
  import androidx.compose.runtime.LaunchedEffect
  import androidx.compose.runtime.State
-@@ -868,6 +869,29 @@ fun MetaDetailsScreen(
+@@ -873,6 +874,29 @@ fun MetaDetailsScreen(
                          }
                      }
                  }

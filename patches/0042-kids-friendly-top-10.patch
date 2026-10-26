@@ -1,5 +1,5 @@
 diff --git a/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt
-index c92fa8fb..db93bfb6 100644
+index c92fa8fb7..db93bfb68 100644
 --- a/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt
 +++ b/composeApp/src/androidMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.android.kt
 @@ -8,6 +8,7 @@ internal actual object ForkHomeSettingsStorage {
@@ -22,7 +22,7 @@ index c92fa8fb..db93bfb6 100644
 +    }
  }
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt
-index 7e3b4dfb..aa8e760f 100644
+index 7e3b4dfb9..aa8e760f4 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeRows.kt
 @@ -63,16 +63,41 @@ object ForkHomeRows {
@@ -83,7 +83,7 @@ index 7e3b4dfb..aa8e760f 100644
                  trendingRows = rows
                  trendingFetchedAtMs = if (usable) nowEpochMs else 0L
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
-index a081b9e6..86bdfefe 100644
+index a081b9e6d..86bdfefe9 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/ForkHomeSettings.kt
 @@ -11,6 +11,8 @@ internal expect object ForkHomeSettingsStorage {
@@ -126,10 +126,10 @@ index a081b9e6..86bdfefe 100644
  
      fun setWhitePlayButton(enabled: Boolean) {
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
-index dbbeb32f..9a314b61 100644
+index 86937a55b..430d345ad 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/home/HomeScreen.kt
-@@ -348,9 +348,15 @@ fun HomeScreen(
+@@ -351,9 +351,15 @@ fun HomeScreen(
          ForkHomeSettings.ensureLoaded()
          ForkHomeSettings.trendingRowsEnabled
      }.collectAsStateWithLifecycle()
@@ -148,7 +148,7 @@ index dbbeb32f..9a314b61 100644
  
      LaunchedEffect(activeProfileId, continueWatchingListState) {
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt
-index 6e660e72..2e19e7c1 100644
+index 6e660e72b..2e19e7c15 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/HomescreenSettingsPage.kt
 @@ -285,6 +285,26 @@ internal fun LazyListScope.homescreenSettingsContent(
@@ -179,10 +179,10 @@ index 6e660e72..2e19e7c1 100644
                  androidx.compose.foundation.layout.Spacer(
                      Modifier.padding(top = if (isTablet) 16.dp else 12.dp),
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
-index b43375cc..5f9424d5 100644
+index 4fec92868..f24124e13 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/tmdb/TmdbMetadataService.kt
-@@ -1252,33 +1252,44 @@ object TmdbMetadataService {
+@@ -1285,33 +1285,44 @@ object TmdbMetadataService {
              endpoint = "trending/$mediaType/$window",
              query = mapOf("language" to language),
          ) ?: return emptyList()
@@ -252,10 +252,10 @@ index b43375cc..5f9424d5 100644
      private suspend fun fetchMoreLikeThis(
          tmdbId: Int,
          mediaType: String,
-@@ -2338,3 +2349,31 @@ internal data class TmdbDiscoverResult(
-     @SerialName("vote_average") val voteAverage: Double? = null,
-     @SerialName("vote_count") val voteCount: Int? = null,
- )
+@@ -2381,3 +2392,31 @@ private fun originalImagePath(images: List<TmdbImage>?, originalLanguage: String
+         ?.filePath
+         ?.trim()
+ }
 +
 +/** Fork: TMDB list items → previews for the Top 10 / Trending rows (people dropped). */
 +private fun forkMapTrending(results: List<TmdbRecommendationItem>, mediaType: String): List<MetaPreview> =
@@ -285,7 +285,7 @@ index b43375cc..5f9424d5 100644
 +            )
 +        }
 diff --git a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt
-index b1b41fdb..77664415 100644
+index b1b41fdb4..776644157 100644
 --- a/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt
 +++ b/composeApp/src/iosMain/kotlin/com/nuvio/app/features/home/ForkHomeSettingsStorage.ios.kt
 @@ -6,6 +6,7 @@ internal actual object ForkHomeSettingsStorage {

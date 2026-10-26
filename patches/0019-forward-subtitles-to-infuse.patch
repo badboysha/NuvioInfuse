@@ -27,10 +27,10 @@ index 49555442f..9435176e9 100644
 +        .values
 +        .flatMap { it.take(INFUSE_MAX_SUBTITLES_PER_LANGUAGE) }
 diff --git a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/PlaybackSettingsPage.kt b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/PlaybackSettingsPage.kt
-index 0f18d7759..75de0c221 100644
+index b5264d166..0c411a5bf 100644
 --- a/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/PlaybackSettingsPage.kt
 +++ b/composeApp/src/commonMain/kotlin/com/nuvio/app/features/settings/PlaybackSettingsPage.kt
-@@ -481,7 +481,8 @@ private fun PlaybackSettingsSection(
+@@ -508,7 +508,8 @@ private fun PlaybackSettingsSection(
                          onClick = { showExternalPlayerAppDialog = true },
                      )
                  }
@@ -40,7 +40,7 @@ index 0f18d7759..75de0c221 100644
                      SettingsGroupDivider(isTablet = isTablet)
                      SettingsSwitchRow(
                          title = stringResource(Res.string.settings_playback_external_player_forward_subtitles),
-@@ -490,6 +491,8 @@ private fun PlaybackSettingsSection(
+@@ -517,6 +518,8 @@ private fun PlaybackSettingsSection(
                          isTablet = isTablet,
                          onCheckedChange = PlayerSettingsRepository::setExternalPlayerForwardSubtitles,
                      )
