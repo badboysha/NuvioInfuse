@@ -1,319 +1,128 @@
-name: Build Mobile Release
+name: ARM64 Android APK
 
 on:
   workflow_dispatch:
-    inputs:
-      mode:
-        description: Validate only, create a draft, or publish the release
-        required: true
-        type: choice
-        options:
-          - dry-run
-          - draft
-          - publish
-        default: dry-run
-      exclude_commits:
-        description: Optional comma-separated commit hashes to omit from the notes
-        required: false
-        type: string
+  push:
+    branches:
+      - main
+    paths:
+      - '**'
+      - '.github/workflows/build.yml'
 
 permissions:
   contents: read
 
 concurrency:
-  group: mobile-release-${{ github.ref }}
-  cancel-in-progress: false
+  group: android-arm64-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  prepare:
-    name: Prepare ${{ inputs.mode }} release
-    runs-on: ubuntu-latest
-    outputs:
-      tag: ${{ steps.release.outputs.tag }}
-      version: ${{ steps.release.outputs.version }}
+  build:
+    name: Build Android APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+
     env:
-      GH_TOKEN: ${{ github.token }}
-      RELEASE_PROPERTIES_BASE64: ${{ secrets.NUVIO_LOCAL_PROPERTIES_BASE64 }}
-      RELEASE_KEYSTORE_BASE64: ${{ secrets.NUVIO_RELEASE_KEYSTORE_BASE64 }}
+      CARGO_TERM_COLOR: always
+      RUST_BACKTRACE: 1
+      ANDROID_NDK_VERSION: 27.2.12479018
 
     steps:
-      - name: Check out full history
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
+      - name: Checkout source
+        uses: actions/checkout@v4
 
-      - name: Read release metadata
-        id: release
-        run: ./scripts/release-metadata.sh "${GITHUB_SHA}" >> "${GITHUB_OUTPUT}"
-
-      - name: Validate release state
-        env:
-          RELEASE_TAG: ${{ steps.release.outputs.tag }}
-          CURRENT_BUMP: ${{ steps.release.outputs.current_bump }}
-          RELEASE_COMMIT: ${{ steps.release.outputs.release_commit }}
-          RELEASE_BRANCH: ${{ github.ref_name }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-          RELEASE_REF_TYPE: ${{ github.ref_type }}
-          RELEASE_MODE: ${{ inputs.mode }}
-        run: |
-          if [[ "${RELEASE_REF_TYPE}" != "branch" ]]; then
-            echo "Releases must be dispatched from a branch, not ${RELEASE_REF_TYPE}." >&2
-            exit 1
-          fi
-          if [[ "${RELEASE_BRANCH}" != "${DEFAULT_BRANCH}" ]]; then
-            echo "Releases must be dispatched from the default branch (${DEFAULT_BRANCH})." >&2
-            exit 1
-          fi
-
-          if git rev-parse --verify --quiet "refs/tags/${RELEASE_TAG}"; then
-            echo "Tag ${RELEASE_TAG} already exists." >&2
-            exit 1
-          fi
-          if gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
-            echo "A GitHub release for ${RELEASE_TAG} already exists." >&2
-            exit 1
-          fi
-
-          unexpected_changes="$(
-            git diff --name-only "${CURRENT_BUMP}..${RELEASE_COMMIT}" \
-              | grep -Ev '^(\.github/workflows/(android-release|update-store-source)\.yml|store\.json|scripts/(build-ios-ipa|generate-release-notes|prepare-ios-dependencies|release-metadata)\.sh|scripts/update-store-source\.py)$' \
-              || true
-          )"
-          if [[ -n "${unexpected_changes}" ]]; then
-            echo "The version bump must be the final application change before release." >&2
-            echo "Unexpected files changed after the bump:" >&2
-            echo "${unexpected_changes}" >&2
-            exit 1
-          fi
-
-          if [[ "${RELEASE_MODE}" != "dry-run" ]]; then
-            required_secrets=(
-              RELEASE_PROPERTIES_BASE64
-              RELEASE_KEYSTORE_BASE64
-            )
-            missing=()
-            for secret_name in "${required_secrets[@]}"; do
-              if [[ -z "${!secret_name}" ]]; then
-                missing+=("${secret_name}")
-              fi
-            done
-            if (( ${#missing[@]} > 0 )); then
-              printf 'Missing required release secrets: %s\n' "${missing[*]}" >&2
-              exit 1
-            fi
-          fi
-
-      - name: Generate release notes
-        env:
-          PREVIOUS_BUMP: ${{ steps.release.outputs.previous_bump }}
-          CURRENT_BUMP: ${{ steps.release.outputs.current_bump }}
-          EXCLUDE_COMMITS: ${{ inputs.exclude_commits }}
-        run: |
-          ./scripts/generate-release-notes.sh \
-            --from "${PREVIOUS_BUMP}" \
-            --to "${CURRENT_BUMP}" \
-            --repository "${GITHUB_REPOSITORY}" \
-            --exclude "${EXCLUDE_COMMITS}" \
-            > release-notes.md
-
-          if [[ ! -s release-notes.md ]]; then
-            echo "No release-note commits were found." >&2
-            exit 1
-          fi
-
-          {
-            echo "## ${{ steps.release.outputs.version }} release notes"
-            echo
-            cat release-notes.md
-          } >> "${GITHUB_STEP_SUMMARY}"
-
-      - name: Upload release notes
-        if: inputs.mode != 'dry-run'
-        uses: actions/upload-artifact@v7
-        with:
-          name: release-notes
-          path: release-notes.md
-          if-no-files-found: error
-
-  android:
-    name: Build Android APKs
-    if: inputs.mode != 'dry-run'
-    needs: prepare
-    runs-on: ubuntu-latest
-    env:
-      RELEASE_VERSION: ${{ needs.prepare.outputs.tag }}
-      RELEASE_PROPERTIES_BASE64: ${{ secrets.NUVIO_LOCAL_PROPERTIES_BASE64 }}
-      RELEASE_KEYSTORE_BASE64: ${{ secrets.NUVIO_RELEASE_KEYSTORE_BASE64 }}
-
-    steps:
-      - name: Check out source
-        uses: actions/checkout@v6
-
-      - name: Set up Java
-        uses: actions/setup-java@v5
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: '17'
+          cache: gradle
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6
-
-      - name: Configure release properties
-        run: |
-          keystore_path="${RUNNER_TEMP}/nuvio-release.jks"
-          printf '%s' "${RELEASE_KEYSTORE_BASE64}" | base64 --decode > "${keystore_path}"
-          printf '%s' "${RELEASE_PROPERTIES_BASE64}" | base64 --decode > local.properties
-
-          sed -i -E '/^[[:space:]]*(sdk\.dir|NUVIO_RELEASE_STORE_FILE)[[:space:]]*=/d' local.properties
-          printf '\nNUVIO_RELEASE_STORE_FILE=%s\n' "${keystore_path}" >> local.properties
-
-          required_properties=(
-            NUVIO_RELEASE_STORE_PASSWORD
-            NUVIO_RELEASE_KEY_ALIAS
-            NUVIO_RELEASE_KEY_PASSWORD
-            TRAKT_CLIENT_ID
-            TRAKT_CLIENT_SECRET
-          )
-          for property_name in "${required_properties[@]}"; do
-            if ! grep -Eq "^${property_name}=.+" local.properties; then
-              echo "Missing required property: ${property_name}" >&2
-              exit 1
-            fi
-          done
-
-      - name: Build full release APKs
-        run: ./gradlew :androidApp:assembleFullRelease -Pnuvio.app.versionName="${RELEASE_VERSION}" --stacktrace
-
-      - name: Upload Android artifacts
-        uses: actions/upload-artifact@v7
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          name: nuvio-${{ needs.prepare.outputs.version }}-android-full-release
-          path: androidApp/build/outputs/apk/full/release/*.apk
-          if-no-files-found: error
+          node-version: '22'
+          cache: npm
 
-  ios:
-    name: Build iOS IPA
-    if: inputs.mode != 'dry-run'
-    needs: prepare
-    runs-on: macos-26
-    timeout-minutes: 120
-    env:
-      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
-      GRADLE_OPTS: -Dfile.encoding=UTF-8
-      KOTLIN_DAEMON_JVMARGS: -Xmx2048M
-      NUVIO_GRADLE_JVMARGS: -Xmx4608M -Dfile.encoding=UTF-8 -XX:MaxMetaspaceSize=768M
-      NUVIO_KOTLIN_NATIVE_JVMARGS: -Xmx4608M
-      RELEASE_PROPERTIES_BASE64: ${{ secrets.NUVIO_LOCAL_PROPERTIES_BASE64 }}
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
 
-    steps:
-      - name: Check out source
-        uses: actions/checkout@v6
-
-      - name: Set up Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: 17
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6
-
-      - name: Cache Kotlin Native
-        uses: actions/cache@v5
-        with:
-          path: ~/.konan
-          key: konan-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('gradle/libs.versions.toml') }}
-          restore-keys: |
-            konan-${{ runner.os }}-${{ runner.arch }}-
-
-      - name: Verify Apple toolchain
+      - name: Install Android SDK components
         run: |
-          xcodebuild -version
-          xcrun --sdk iphoneos --show-sdk-version
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "ndk;${ANDROID_NDK_VERSION}"
 
-      - name: Configure runtime properties
+      - name: Configure Android environment
         run: |
-          printf '%s' "${RELEASE_PROPERTIES_BASE64}" | base64 --decode > local.properties
-          sed -i '' -E '/^[[:space:]]*(sdk\.dir|NUVIO_RELEASE_STORE_FILE)[[:space:]]*=/d' local.properties
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/$ANDROID_NDK_VERSION" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/$ANDROID_NDK_VERSION" >> "$GITHUB_ENV"
 
-      - name: Prepare iOS dependencies
-        run: ./scripts/prepare-ios-dependencies.sh
-
-      - name: Build unsigned full IPA
-        run: |
-          (
-            while sleep 60; do
-              echo "::group::Build resources $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-              uptime
-              vm_stat
-              ps -Ao pid,etime,%cpu,rss,command -r | head -n 12 || true
-              echo "::endgroup::"
-            done
-          ) &
-          monitor_pid=$!
-          trap 'kill "${monitor_pid}" 2>/dev/null || true' EXIT
-          ./scripts/build-ios-ipa.sh "${{ needs.prepare.outputs.version }}"
-
-      - name: Upload iOS artifact
-        uses: actions/upload-artifact@v7
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
-          name: nuvio-${{ needs.prepare.outputs.version }}-ios-full-release
-          path: build/ios-ipa/*-full-release.ipa
-          if-no-files-found: error
+          targets: aarch64-linux-android
 
-  release:
-    name: Create ${{ inputs.mode }} release
-    if: inputs.mode != 'dry-run'
-    needs:
-      - prepare
-      - android
-      - ios
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    env:
-      GH_TOKEN: ${{ github.token }}
-      RELEASE_MODE: ${{ inputs.mode }}
-      RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
-      RELEASE_VERSION: ${{ needs.prepare.outputs.tag }}
-      RELEASE_BRANCH: ${{ github.ref_name }}
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
 
-    steps:
-      - name: Download release artifacts
-        uses: actions/download-artifact@v8
-        with:
-          path: release-assets
-          merge-multiple: true
-
-      - name: Create GitHub release
+      - name: Verify build environment
         run: |
-          mapfile -t release_files < <(find release-assets -maxdepth 1 -type f \( -name '*.apk' -o -name '*.ipa' \) -print | sort)
-          if (( ${#release_files[@]} == 0 )); then
-            echo "No release packages were produced." >&2
+          java -version
+          node --version
+          npm --version
+          rustc --version
+          cargo --version
+          rustup target list --installed
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME"
+          test -d "$ANDROID_NDK_HOME"
+
+      - name: Install npm dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          elif [ -f package.json ]; then
+            npm install
+          else
+            echo "No package.json found."
             exit 1
           fi
 
-          release_args=(
-            "${RELEASE_TAG}"
-            --repo "${GITHUB_REPOSITORY}"
-            --target "${RELEASE_BRANCH}"
-            --title "${RELEASE_VERSION}"
-            --notes-file release-assets/release-notes.md
-          )
-          if [[ "${RELEASE_MODE}" == "draft" ]]; then
-            release_args+=(--draft)
+      - name: Grant Gradle permissions
+        run: |
+          if [ -f gradlew ]; then
+            chmod +x gradlew
+          elif [ -f androidApp/gradlew ]; then
+            chmod +x androidApp/gradlew
+          else
+            echo "Gradle wrapper not found."
+            exit 1
           fi
-          gh release create "${release_args[@]}" "${release_files[@]}"
 
-  store:
-    name: Update sideload source
-    if: inputs.mode == 'publish'
-    needs:
-      - prepare
-      - release
-    permissions:
-      contents: write
-    uses: ./.github/workflows/update-store-source.yml
-    with:
-      tag: ${{ needs.prepare.outputs.tag }}
-      version: ${{ needs.prepare.outputs.version }}
+      - name: Build ARM64 Android APK
+        run: |
+          if [ -f gradlew ]; then
+            ./gradlew :androidApp:assembleRelease \
+              --stacktrace \
+              --info
+          else
+            cd androidApp
+            ./gradlew :androidApp:assembleRelease \
+              --stacktrace \
+              --info
+          fi
+
+      - name: Upload APK artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Android-ARM64-APK
+          path: |
+            **/build/outputs/apk/**/*.apk
+          if-no-files-found: warn
+          retention-days: ARM64
